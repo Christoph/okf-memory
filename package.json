@@ -4,6 +4,17 @@
   "description": "Project memory for coding agents, stored as an OKF knowledge bundle in memory/ — tracks architecture, decisions, patterns, pitfalls, and setup.",
   "type": "module",
   "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "agent-skills",
+    "okf",
+    "memory"
+  ],
+  "pi": {
+    "skills": [
+      "./skills"
+    ]
+  },
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "sync": "node scripts/sync.mjs",

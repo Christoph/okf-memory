@@ -27,7 +27,31 @@ Development loop from this checkout:
 claude --plugin-dir .
 ```
 
-## Install: opencode / Codex CLI / pi
+## Install: pi
+
+From git:
+
+```bash
+pi install git:github.com/Christoph/okf-memory
+```
+
+Or try it for one session without writing settings:
+
+```bash
+pi -e git:github.com/Christoph/okf-memory
+```
+
+This package exposes the three skills under `skills/` via the `pi.skills` package manifest. After install/restart, use:
+
+```text
+/skill:okf-init
+/skill:okf-consolidate
+/skill:okf-memorize
+```
+
+`pi install Christoph/okf-memory` is not a supported pi source form; use the `git:github.com/...` shorthand or a full URL such as `pi install https://github.com/Christoph/okf-memory`.
+
+## Install: opencode / Codex CLI
 
 Copy all three skill folders into the harness's skills directory:
 
