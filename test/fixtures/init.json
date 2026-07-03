@@ -1,0 +1,37 @@
+{
+  "mode": "init",
+  "project": "demo-app",
+  "bundlePath": "memory/",
+  "round": 1,
+  "areas": [
+    { "id": "architecture", "title": "Architecture", "description": "How the system is structured" },
+    { "id": "decisions", "title": "Decisions", "description": "Why important choices were made" },
+    { "id": "patterns", "title": "Patterns & Conventions", "description": "How code here is written" },
+    { "id": "pitfalls", "title": "Pitfalls", "description": "Known bugs and sharp edges" },
+    { "id": "setup", "title": "Setup", "description": "Build, test, and run commands" }
+  ],
+  "memories": [
+    {
+      "id": "patterns/error-handling",
+      "area": "patterns",
+      "action": "create",
+      "type": "Pattern",
+      "title": "Error handling",
+      "description": "Handlers return typed errors and let middleware format responses.",
+      "tags": ["errors", "handlers"],
+      "files": ["src/errors.ts"],
+      "body": "## Pattern\n\nReturn `Result` values from web handlers and let the shared middleware convert failures into HTTP responses."
+    },
+    {
+      "id": "setup/test-command",
+      "area": "setup",
+      "action": "create",
+      "type": "Setup",
+      "title": "Test command",
+      "description": "The project uses node --test for its test suite.",
+      "tags": ["tests"],
+      "files": ["package.json"],
+      "body": "Run `npm test` before changing the review server."
+    }
+  ]
+}

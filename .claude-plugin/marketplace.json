@@ -1,0 +1,11 @@
+{
+  "name": "okf-memory",
+  "owner": { "name": "Christoph Maier" },
+  "plugins": [
+    {
+      "name": "okf-memory",
+      "source": "./",
+      "description": "Project memory for coding agents: tracks architecture, decisions, patterns, pitfalls, and setup as an OKF bundle in memory/ with a browser review UI."
+    }
+  ]
+}

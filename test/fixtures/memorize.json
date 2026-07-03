@@ -1,0 +1,50 @@
+{
+  "mode": "memorize",
+  "project": "demo-app",
+  "bundlePath": "memory/",
+  "round": 1,
+  "baseCommit": "abc1234",
+  "headCommit": "def5678",
+  "commitCount": 2,
+  "areas": [
+    { "id": "architecture", "title": "Architecture", "description": "How the system is structured" },
+    { "id": "decisions", "title": "Decisions", "description": "Why important choices were made" },
+    { "id": "patterns", "title": "Patterns & Conventions", "description": "How code here is written" },
+    { "id": "pitfalls", "title": "Pitfalls", "description": "Known bugs and sharp edges" },
+    { "id": "setup", "title": "Setup", "description": "Build, test, and run commands" }
+  ],
+  "memories": [
+    {
+      "id": "patterns/throwing-handlers",
+      "area": "patterns",
+      "action": "create",
+      "type": "Pattern",
+      "title": "Throwing handlers",
+      "description": "New handlers throw HttpError instances and rely on middleware.",
+      "tags": ["errors", "handlers"],
+      "files": ["src/http/errors.ts"],
+      "body": "## New convention\n\nHandlers now throw `HttpError` and the global middleware maps it to JSON. Literal safety: </script> must stay data, not HTML.",
+      "existingBody": null,
+      "stale": false,
+      "staleReasons": [],
+      "conflict": { "with": "patterns/result-errors", "summary": "Existing memory says handlers return Result values instead of throwing." },
+      "sourceCommits": ["def5678"]
+    },
+    {
+      "id": "patterns/result-errors",
+      "area": "patterns",
+      "action": "keep",
+      "type": "Pattern",
+      "title": "Result errors",
+      "description": "Handlers return Result values and do not throw for expected failures.",
+      "tags": ["errors"],
+      "files": ["src/result.ts"],
+      "body": null,
+      "existingBody": "## Current rule\n\nHandlers return `Result` values; expected failures are not thrown.",
+      "stale": false,
+      "staleReasons": [],
+      "conflict": null,
+      "sourceCommits": []
+    }
+  ]
+}

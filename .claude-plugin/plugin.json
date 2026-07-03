@@ -1,0 +1,7 @@
+{
+  "name": "okf-memory",
+  "version": "1.0.0",
+  "description": "Project memory for coding agents: tracks architecture, decisions, patterns, pitfalls, and setup as an OKF bundle in memory/ with a browser review UI.",
+  "author": "Christoph Maier",
+  "license": "MIT"
+}

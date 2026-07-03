@@ -1,0 +1,43 @@
+{
+  "mode": "consolidate",
+  "project": "demo-app",
+  "bundlePath": "memory/",
+  "round": 2,
+  "areas": [
+    { "id": "architecture", "title": "Architecture", "description": "How the system is structured" },
+    { "id": "decisions", "title": "Decisions", "description": "Why important choices were made" },
+    { "id": "patterns", "title": "Patterns & Conventions", "description": "How code here is written" },
+    { "id": "pitfalls", "title": "Pitfalls", "description": "Known bugs and sharp edges" },
+    { "id": "setup", "title": "Setup", "description": "Build, test, and run commands" }
+  ],
+  "memories": [
+    {
+      "id": "architecture/api-server",
+      "area": "architecture",
+      "action": "keep",
+      "type": "Architecture",
+      "title": "API server",
+      "description": "The HTTP API is served from the api package.",
+      "tags": ["api"],
+      "files": ["packages/api/src/server.ts"],
+      "body": null,
+      "existingBody": "## Current\n\nThe API server starts from `packages/api/src/server.ts`.",
+      "stale": true,
+      "staleReasons": ["Referenced file packages/api/src/server.ts no longer exists"]
+    },
+    {
+      "id": "patterns/result-errors",
+      "area": "patterns",
+      "action": "update",
+      "type": "Pattern",
+      "title": "Result errors",
+      "description": "Domain operations return Result objects instead of throwing.",
+      "tags": ["errors"],
+      "files": ["src/result.ts"],
+      "body": "## Updated\n\nUse the shared `Result` helper for recoverable domain failures.",
+      "existingBody": "## Current\n\nUse tuples for recoverable domain failures.",
+      "stale": false,
+      "staleReasons": []
+    }
+  ]
+}

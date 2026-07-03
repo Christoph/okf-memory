@@ -1,0 +1,15 @@
+{
+  "name": "okf-memory",
+  "version": "1.0.0",
+  "description": "Project memory for coding agents, stored as an OKF knowledge bundle in memory/ — tracks architecture, decisions, patterns, pitfalls, and setup.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "sync": "node scripts/sync.mjs",
+    "validate": "node scripts/validate.mjs test/fixtures/valid-memory",
+    "preview:init": "node skills/okf-init/server.mjs < test/fixtures/init.json",
+    "preview:consolidate": "node skills/okf-init/server.mjs < test/fixtures/consolidate.json",
+    "preview:memorize": "node skills/okf-init/server.mjs < test/fixtures/memorize.json"
+  }
+}
