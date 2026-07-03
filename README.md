@@ -41,15 +41,17 @@ Or try it for one session without writing settings:
 pi -e git:github.com/Christoph/okf-memory
 ```
 
-This package exposes the three skills under `skills/` via the `pi.skills` package manifest. After install/restart, use:
+This package exposes a small pi extension plus the three skills under `skills/`. After install/restart, use the friendly commands:
 
 ```text
-/skill:okf-init
-/skill:okf-consolidate
-/skill:okf-memorize
+/okf-init
+/okf-consolidate
+/okf-memorize
 ```
 
-`pi install Christoph/okf-memory` is not a supported pi source form; use the `git:github.com/...` shorthand or a full URL such as `pi install https://github.com/Christoph/okf-memory`.
+The skills are also available directly as `/skill:okf-init`, `/skill:okf-consolidate`, and `/skill:okf-memorize`.
+
+`pi install Christoph/okf-memory` is not a supported pi source form in current pi releases; use the `git:github.com/...` shorthand or a full URL such as `pi install https://github.com/Christoph/okf-memory`.
 
 ## Install: opencode / Codex CLI
 
