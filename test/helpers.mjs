@@ -6,9 +6,10 @@ import { fileURLToPath } from "node:url";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 export const serverPath = join(root, "skills/okf-init/server.mjs");
+export const dashboardServerPath = join(root, "skills/okf/server.mjs");
 export const fixturePath = (name) => join(root, "test/fixtures", name);
 
-export function startServer(input, extraEnv = {}) {
+export function startServer(input, extraEnv = {}, command = serverPath) {
 	let payload;
 	if (typeof input === "string" && input.endsWith(".json")) {
 		payload = readFileSync(fixturePath(input), "utf8");
@@ -17,7 +18,7 @@ export function startServer(input, extraEnv = {}) {
 	} else {
 		payload = JSON.stringify(input);
 	}
-	const child = spawn(process.execPath, [serverPath], {
+	const child = spawn(process.execPath, [command], {
 		cwd: root,
 		env: {
 			...process.env,

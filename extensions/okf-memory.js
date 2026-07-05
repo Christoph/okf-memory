@@ -1,5 +1,9 @@
 const COMMANDS = [
 	{
+		name: "okf",
+		description: "Open the okf-memory project memory plane dashboard.",
+	},
+	{
 		name: "okf-init",
 		description: "Initialize an okf-memory OKF bundle with browser review.",
 	},

@@ -86,6 +86,40 @@ test("non-local Host header returns 403", async () => {
 	}
 });
 
+test("OKF_BIND_HOST enables sandbox remote access while preserving token checks", async () => {
+	const server = startServer("init.json", { OKF_BIND_HOST: "0.0.0.0" });
+	try {
+		const url = await server.ready;
+		assert.match(url, /http:\/\/0\.0\.0\.0:/);
+		await sleep(50);
+		assert.match(server.stderr, /remote bind enabled/);
+
+		const reachableUrl = new URL(url);
+		reachableUrl.hostname = "127.0.0.1";
+		const withRemoteHost = await request(reachableUrl.toString(), {
+			headers: { Host: "sandbox.example:8888" },
+		});
+		assert.equal(withRemoteHost.status, 200);
+
+		const withoutToken = await request(
+			reachableUrl.toString().replace(/\?t=[^&]+/, ""),
+			{
+				headers: { Host: "sandbox.example:8888" },
+			},
+		);
+		assert.equal(withoutToken.status, 403);
+
+		await request(withPath(reachableUrl.toString(), "/cancel?now=1"), {
+			method: "POST",
+			body: "",
+			headers: { Host: "sandbox.example:8888" },
+		});
+		await server.waitForExit();
+	} finally {
+		await close(server);
+	}
+});
+
 test("cancel grace treats reload as non-cancel, while ?now=1 cancels immediately", async () => {
 	const graceful = startServer("init.json");
 	try {

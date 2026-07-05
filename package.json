@@ -22,6 +22,7 @@
     "test": "node --test test/*.test.mjs",
     "sync": "node scripts/sync.mjs",
     "validate": "node scripts/validate.mjs test/fixtures/valid-memory",
+    "preview:dashboard": "node skills/okf/server.mjs < test/fixtures/dashboard.json",
     "preview:init": "node skills/okf-init/server.mjs < test/fixtures/init.json",
     "preview:consolidate": "node skills/okf-init/server.mjs < test/fixtures/consolidate.json",
     "preview:memorize": "node skills/okf-init/server.mjs < test/fixtures/memorize.json"

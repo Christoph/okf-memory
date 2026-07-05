@@ -1,0 +1,39 @@
+{
+  "project": "demo-app",
+  "bundlePath": "memory/",
+  "memory": {
+    "initialized": true,
+    "okfVersion": "0.1",
+    "lastMemorizedCommit": "abc1234567890",
+    "conceptCount": 12,
+    "staleCount": 1,
+    "unmemorizedCommitCount": 3
+  },
+  "areas": [
+    { "id": "architecture", "title": "Architecture", "description": "How the system is structured", "count": 3 },
+    { "id": "decisions", "title": "Decisions", "description": "Why important choices were made", "count": 2 },
+    { "id": "patterns", "title": "Patterns & Conventions", "description": "How code here is written", "count": 4 },
+    { "id": "pitfalls", "title": "Pitfalls", "description": "Known bugs and sharp edges", "count": 2 },
+    { "id": "setup", "title": "Setup", "description": "Build, test, and run commands", "count": 1 }
+  ],
+  "plans": [
+    {
+      "id": "plans/dashboard-ui",
+      "title": "Dashboard UI",
+      "description": "Add a browser project memory plane.",
+      "status": "in-progress"
+    }
+  ],
+  "chunks": [
+    {
+      "id": "plans/dashboard-ui/render-dashboard",
+      "planId": "plans/dashboard-ui",
+      "title": "Render dashboard",
+      "description": "Show memory status, areas, plans, chunks, and action buttons.",
+      "status": "pending",
+      "dependsOn": ["plans/dashboard-ui/design-schema"],
+      "files": ["skills/okf/server.mjs"],
+      "body": "## Work\n\nRender the project memory plane."
+    }
+  ]
+}

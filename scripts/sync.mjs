@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const SERVER_SKILLS = ["okf-init"];
+const SERVER_SKILLS = ["okf", "okf-init"];
 
 export const COPIES = SERVER_SKILLS.flatMap((skill) => [
 	["lib/server.mjs", `skills/${skill}/lib/server.mjs`],

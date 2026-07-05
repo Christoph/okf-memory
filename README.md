@@ -8,9 +8,12 @@ The bundle follows `docs/OKF_SPEC.md` progressive disclosure: start at `memory/i
 
 ## Commands
 
+- `/okf` — open the project memory plane dashboard for memory state, OKF plans, per-chunk files, and agent action callbacks.
 - `/okf-init` — analyze a repo, draft memories, review them in a browser UI, then write the initial bundle.
 - `/okf-consolidate` — review/update/merge/delete existing memories and flag stale file references.
 - `/okf-memorize` — draft memories from commits since `last_memorized_commit`, flag conflicts, then advance the pointer on approval.
+
+Plans and implementation chunks are represented as normal OKF markdown concepts under `memory/plans/`; each chunk is its own `.md` file with frontmatter such as `type: Work Chunk`, `status: pending`, `depends_on: [...]`, and `files: [...]` so the dashboard remains human-readable and diffable.
 
 ## Install: Claude Code
 
@@ -41,29 +44,31 @@ Or try it for one session without writing settings:
 pi -e git:github.com/Christoph/okf-memory
 ```
 
-This package exposes a small pi extension plus the three skills under `skills/`. After install/restart, use the friendly commands:
+This package exposes a small pi extension plus the skills under `skills/`. After install/restart, use the friendly commands:
 
 ```text
+/okf
 /okf-init
 /okf-consolidate
 /okf-memorize
 ```
 
-The skills are also available directly as `/skill:okf-init`, `/skill:okf-consolidate`, and `/skill:okf-memorize`.
+The skills are also available directly as `/skill:okf`, `/skill:okf-init`, `/skill:okf-consolidate`, and `/skill:okf-memorize`.
 
 `pi install Christoph/okf-memory` is not a supported pi source form in current pi releases; use the `git:github.com/...` shorthand or a full URL such as `pi install https://github.com/Christoph/okf-memory`.
 
 ## Install: opencode / Codex CLI
 
-Copy all three skill folders into the harness's skills directory:
+Copy all skill folders into the harness's skills directory:
 
 ```text
+skills/okf/
 skills/okf-init/
 skills/okf-consolidate/
 skills/okf-memorize/
 ```
 
-Install them together. `okf-consolidate` and `okf-memorize` invoke `../okf-init/server.mjs` for the shared browser review UI. Exact skills paths vary by harness/version; use that tool's current skills documentation.
+Install them together. `okf-consolidate` and `okf-memorize` invoke `../okf-init/server.mjs` for the shared browser review UI, while `/okf` uses `okf/server.mjs` for the dashboard. Exact skills paths vary by harness/version; use that tool's current skills documentation.
 
 ## Project-agent snippet
 
@@ -91,12 +96,13 @@ After fixing a bug or making a notable decision, suggest running /okf-memorize.
 npm test
 npm run sync -- --check
 npm run validate
+npm run preview:dashboard
 npm run preview:init
 npm run preview:consolidate
 npm run preview:memorize
 ```
 
-The preview commands launch the shared review server with fixtures. Set `OKF_NO_OPEN=1` to suppress opening a browser. `npm run validate` checks the fixture bundle in this repo.
+The preview commands launch the shared review server with fixtures. Set `OKF_NO_OPEN=1` to suppress opening a browser. In sandbox/container images where the host cannot reach loopback inside the environment, set `OKF_BIND_HOST=0.0.0.0` to bind the local UI server on all interfaces; keep the token URL private. `npm run validate` checks the fixture bundle in this repo.
 
 Validate a target repo bundle:
 
