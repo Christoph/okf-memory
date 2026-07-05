@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import http from "node:http";
 import { exec } from "node:child_process";
-import { randomBytes } from "node:crypto";
 
 export function readStdin() {
 	return new Promise((resolve) => {
@@ -24,23 +23,14 @@ export async function readPayload() {
 
 const TIMEOUT_MS = 7_200_000; // 2 hours
 const CANCEL_GRACE_MS = parseInt(process.env.OKF_CANCEL_GRACE_MS || "2500", 10);
-const LOCAL_HOST_RE = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/;
-const LOOPBACK_BIND_RE = /^(127\.0\.0\.1|localhost|::1)$/;
-
 function bindHost() {
-	return (process.env.OKF_BIND_HOST || "127.0.0.1").trim() || "127.0.0.1";
-}
-
-function allowsRemoteHostHeaders(host) {
-	return !LOOPBACK_BIND_RE.test(host);
+	return (process.env.OKF_BIND_HOST || "0.0.0.0").trim() || "0.0.0.0";
 }
 
 export function serve({ step = "app", html }) {
 	const startPort = parseInt(process.env.OKF_PORT || "8888", 10);
 	const MAX_PORT_RETRIES = 20;
 	const host = bindHost();
-	const allowRemoteHostHeaders = allowsRemoteHostHeaders(host);
-	const token = randomBytes(16).toString("hex");
 	let done = false;
 	let cancelTimer = null;
 
@@ -56,15 +46,6 @@ export function serve({ step = "app", html }) {
 
 	const server = http.createServer((req, res) => {
 		const url = new URL(req.url, "http://127.0.0.1");
-		if (
-			(!allowRemoteHostHeaders &&
-				!LOCAL_HOST_RE.test(String(req.headers.host || ""))) ||
-			url.searchParams.get("t") !== token
-		) {
-			res.writeHead(403, { "Content-Type": "text/plain" });
-			res.end("Forbidden");
-			return;
-		}
 		if (req.method === "GET" && url.pathname === "/") {
 			if (cancelTimer) {
 				clearTimeout(cancelTimer);
@@ -112,8 +93,8 @@ export function serve({ step = "app", html }) {
 	const onListen = () => {
 		const { port } = server.address();
 		const displayHost =
-			host === "0.0.0.0" || host === "::" ? host : "127.0.0.1";
-		const url = `http://${displayHost}:${port}/?t=${token}`;
+			host === "0.0.0.0" || host === "::" ? "127.0.0.1" : host;
+		const url = `http://${displayHost}:${port}/`;
 		if (!process.env.OKF_NO_OPEN) {
 			let opener = "xdg-open";
 			if (process.platform === "win32") opener = 'start ""';
@@ -121,11 +102,6 @@ export function serve({ step = "app", html }) {
 			exec(`${opener} "${url}"`);
 		}
 		process.stderr.write(`okf-memory: ${step} listening on ${url}\n`);
-		if (allowRemoteHostHeaders) {
-			process.stderr.write(
-				"okf-memory: remote bind enabled by OKF_BIND_HOST; keep the token URL private\n",
-			);
-		}
 	};
 
 	const tryListen = (port, attemptsLeft) => {
