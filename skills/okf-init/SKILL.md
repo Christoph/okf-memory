@@ -72,12 +72,45 @@ Create:
 memory/
   index.md
   log.md
+  EXTENSIONS.md
   architecture/index.md
   decisions/index.md
   patterns/index.md
   pitfalls/index.md
   setup/index.md
 ```
+
+Also create `memory/EXTENSIONS.md` as the extension-facing memory contract. It is
+an ordinary OKF concept with frontmatter similar to:
+
+```yaml
+---
+type: Reference
+title: okf-memory extension contract
+description: How agents and extensions should read and safely update this memory bundle.
+tags:
+  - extensions
+  - memory-contract
+timestamp: <ISO timestamp>
+---
+```
+
+Its body must explain, in project-specific but concise terms:
+
+- Start reads at `memory/index.md`, follow area indexes, then open only relevant
+  concept files (progressive disclosure).
+- A concept ID is the bundle-relative path without `.md`; chunk IDs/slugs are
+  their filenames without `.md` and are the stable identity used by tools.
+- Non-reserved concept files require YAML frontmatter with a non-empty `type`;
+  preserve unknown keys and tolerate unknown concept types.
+- Safe writes create or update one concept file at a time, keep markdown
+  human-readable and diffable, update `timestamp`, regenerate affected indexes,
+  and append a newest-first `memory/log.md` entry for meaningful changes.
+- Validate with `node scripts/validate.mjs memory/` when this repository's
+  validator is available; otherwise apply the OKF v0.1 conformance rules.
+
+Link this contract from the root `memory/index.md` so other extensions can
+self-discover it without package-specific knowledge.
 
 For every accepted concept, write `<area>/<slug>.md` with frontmatter:
 
@@ -105,7 +138,7 @@ last_memorized_commit: <git rev-parse HEAD>
 ---
 ```
 
-Regenerate area indexes and root index with links. Use bundle-absolute cross-links such as `/patterns/error-handling.md`. Append a newest-first `memory/log.md` entry headed by today's ISO date with bold-lead `**Initialization**` bullets.
+Regenerate area indexes and root index with links, including `* [Extension contract](EXTENSIONS.md) - How extensions should read and update this memory bundle.`. Use bundle-absolute cross-links such as `/patterns/error-handling.md`. Append a newest-first `memory/log.md` entry headed by today's ISO date with bold-lead `**Initialization**` bullets.
 
 Run:
 
@@ -113,4 +146,4 @@ Run:
 node scripts/validate.mjs memory/
 ```
 
-Report created/accepted/rejected counts and remind the user to paste the README project-memory snippet into `CLAUDE.md` or `AGENTS.md`.
+Report created/accepted/rejected counts, mention that `memory/EXTENSIONS.md` was created for other extensions, and remind the user to paste the README project-memory snippet into `CLAUDE.md` or `AGENTS.md`.

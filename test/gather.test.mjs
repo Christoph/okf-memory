@@ -37,6 +37,10 @@ type: Plan
 title: Dashboard UI
 description: Add a browser memory plane.
 status: in-progress
+branch: feature/dashboard
+created: 2026-07-06
+files:
+  - skills/okf/server.mjs
 ---
 
 body
@@ -49,10 +53,32 @@ type: Work Chunk
 title: Render dashboard
 description: Render state and actions.
 status: pending
+plan: plans/dashboard-ui
+size: small
+lines_estimate: 60
+tests_status: green
 depends_on:
   - plans/dashboard-ui/design-schema
 files:
   - skills/okf/server.mjs
+---
+
+chunk body
+`,
+	);
+	mkdirSync(join(dir, "memory/chunks"), { recursive: true });
+	writeFileSync(
+		join(dir, "memory/chunks/draft-slug.md"),
+		`---
+type: Chunk
+title: Draft slug
+description: Draft chunk visible from disk.
+status: draft
+size: small
+lines_estimate: 40
+depends_on: []
+files:
+  - skills/okf/gather.mjs
 ---
 
 chunk body
@@ -71,24 +97,59 @@ test("gather builds the dashboard payload from bundle + git state", () => {
 		assert.equal(p.bundlePath, "memory/");
 		assert.equal(p.memory.initialized, true);
 		assert.equal(p.memory.okfVersion, "0.1");
-		// error-handling.md (patterns) + plan + chunk = 3 concepts
-		assert.equal(p.memory.conceptCount, 3);
+		assert.equal(p.memory.lastMemorizedCommit, "abc123");
+		// error-handling.md (patterns) + plan + legacy chunk + draft chunk = 4 concepts
+		assert.equal(p.memory.conceptCount, 4);
 		// every concept's files anchor points at untracked paths in this repo
 		assert.ok(p.memory.staleCount >= 1);
 		assert.equal(p.areas.length, 5);
 		assert.equal(p.areas.find((a) => a.id === "patterns").count, 1);
+		assert.equal(p.memories.length, 4);
+		assert.deepEqual(
+			p.memories.find((m) => m.id === "chunks/draft-slug"),
+			{
+				id: "chunks/draft-slug",
+				slug: "draft-slug",
+				path: "chunks/draft-slug.md",
+				area: "chunks",
+				type: "Chunk",
+				title: "Draft slug",
+				description: "Draft chunk visible from disk.",
+				status: "draft",
+				files: ["skills/okf/gather.mjs"],
+			},
+		);
 
 		assert.equal(p.plans.length, 1);
 		assert.equal(p.plans[0].id, "plans/dashboard-ui");
+		assert.equal(p.plans[0].branch, "feature/dashboard");
+		assert.equal(p.plans[0].created, "2026-07-06");
+		assert.deepEqual(p.plans[0].files, ["skills/okf/server.mjs"]);
 		assert.deepEqual(p.plans[0].chunks, [
 			"plans/dashboard-ui/render-dashboard",
 		]);
-		assert.equal(p.chunks.length, 1);
-		assert.equal(p.chunks[0].planId, "plans/dashboard-ui");
-		assert.deepEqual(p.chunks[0].dependsOn, [
+		assert.equal(p.chunks.length, 2);
+		const legacyChunk = p.chunks.find(
+			(c) => c.id === "plans/dashboard-ui/render-dashboard",
+		);
+		assert.ok(legacyChunk);
+		assert.equal(legacyChunk.slug, "render-dashboard");
+		assert.equal(legacyChunk.planId, "plans/dashboard-ui");
+		assert.equal(legacyChunk.path, "plans/dashboard-ui/render-dashboard.md");
+		assert.equal(legacyChunk.size, "small");
+		assert.equal(legacyChunk.linesEstimate, "60");
+		assert.equal(legacyChunk.testsStatus, "green");
+		assert.deepEqual(legacyChunk.dependsOn, [
 			"plans/dashboard-ui/design-schema",
 		]);
-		assert.match(p.chunks[0].body, /chunk body/);
+		assert.match(legacyChunk.body, /chunk body/);
+
+		const draftChunk = p.chunks.find((c) => c.id === "draft-slug");
+		assert.ok(draftChunk);
+		assert.equal(draftChunk.slug, "draft-slug");
+		assert.equal(draftChunk.path, "chunks/draft-slug.md");
+		assert.equal(draftChunk.status, "draft");
+		assert.deepEqual(draftChunk.dependsOn, []);
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}

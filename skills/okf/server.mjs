@@ -7,8 +7,9 @@
  *     project, bundlePath, round,
  *     memory: { initialized, okfVersion?, lastMemorizedCommit?, conceptCount?, staleCount?, unmemorizedCommitCount? },
  *     areas: [{ id, title, description, count }],
- *     plans: [{ id, title, description, status, chunks: [chunkId] }],
- *     chunks: [{ id, planId, title, description, status, dependsOn, files, body }]
+ *     memories: [{ id, slug, path, area, type, title, description, status, files }],
+ *     plans: [{ id, title, description, status, branch, created, files, chunks: [chunkId] }],
+ *     chunks: [{ id, slug, path, planId, title, description, status, size, linesEstimate, testsStatus, dependsOn, files, body }]
  *   }
  *
  * output (exactly one JSON line on stdout):
@@ -22,6 +23,7 @@ const data = await readPayload();
 const memory =
 	data.memory && typeof data.memory === "object" ? data.memory : {};
 const areas = Array.isArray(data.areas) ? data.areas : [];
+const memories = Array.isArray(data.memories) ? data.memories : [];
 const plans = Array.isArray(data.plans) ? data.plans : [];
 const chunks = Array.isArray(data.chunks) ? data.chunks : [];
 
@@ -89,6 +91,46 @@ ${shown
 </div></section>`;
 }
 
+function memoryCard(m) {
+	const files =
+		Array.isArray(m.files) && m.files.length
+			? m.files.map((f) => `<code>${escHtml(f)}</code>`).join(" ")
+			: '<span class="muted">none</span>';
+	const type = m.type || "Concept";
+	return `<article class="memory-card" data-id="${escHtml(m.id)}">
+  <div class="card-head"><h3>${escHtml(m.title || m.id)}</h3>${m.status ? statusChip(m.status) : ""}</div>
+  <p>${escHtml(m.description || "")}</p>
+  <div class="meta"><span>type: <code>${escHtml(type)}</code></span> <span>slug: <code>${escHtml(m.slug || m.id)}</code></span> <span>path: <code>${escHtml(m.path || `${m.id}.md`)}</code></span></div>
+  <div class="meta"><span>files: ${files}</span></div>
+  <textarea class="memory-comment" data-comment-for="${escHtml(m.slug || m.id)}" placeholder="Comment with the update this memory needs."></textarea>
+  <div class="chunk-actions">
+    <button data-action="update-memory" data-target="${escHtml(m.slug || m.id)}">Update via comment</button>
+    <button data-action="draft-memory" data-target="${escHtml(m.id)}">Add related memory</button>
+  </div>
+</article>`;
+}
+
+function memoryBrowser() {
+	if (!memories.length) {
+		return `<section class="panel"><h2>All memories</h2><p class="muted">No concept files found yet.</p></section>`;
+	}
+	const byArea = new Map();
+	for (const m of memories) {
+		const key = m.area || "root";
+		if (!byArea.has(key)) byArea.set(key, []);
+		byArea.get(key).push(m);
+	}
+	return `<section class="panel">
+  <div class="section-head"><h2>All memories</h2><span class="muted">${escHtml(memories.length)} concept files</span></div>
+  <p class="hint">Browse every OKF concept discovered on disk. Slugs are stable identifiers for chunk files; paths are bundle-relative.</p>
+  ${Array.from(byArea.entries())
+			.map(
+				([area, items]) => `<section class="memory-group"><h3>${escHtml(area)}</h3><div class="grid memories">${items.map(memoryCard).join("\n")}</div></section>`,
+			)
+			.join("\n")}
+</section>`;
+}
+
 function chunkCard(c) {
 	const deps =
 		Array.isArray(c.dependsOn) && c.dependsOn.length
@@ -98,9 +140,14 @@ function chunkCard(c) {
 		Array.isArray(c.files) && c.files.length
 			? c.files.map((f) => `<code>${escHtml(f)}</code>`).join(" ")
 			: '<span class="muted">none</span>';
+	const details = [c.size, c.linesEstimate ? `~${c.linesEstimate} lines` : "", c.testsStatus ? `tests: ${c.testsStatus}` : ""]
+		.filter(Boolean)
+		.map((d) => `<span>${escHtml(d)}</span>`)
+		.join(" · ");
 	return `<article class="chunk" data-id="${escHtml(c.id)}">
   <div class="card-head"><h4>${escHtml(c.title || c.id)}</h4>${statusChip(c.status)}</div>
   <p>${escHtml(c.description || "")}</p>
+  ${details ? `<div class="meta">${details}</div>` : ""}
   <div class="meta"><span>depends on: ${deps}</span></div>
   <div class="meta"><span>files: ${files}</span></div>
   <div class="chunk-actions">
@@ -149,14 +196,15 @@ const CSS = `
 .hero{display:grid;gap:14px}.hero h2,.panel h2{font-size:18px;margin:0 0 4px}.hero p,.hint,.muted{color:var(--muted)}
 .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}.metrics div{border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--bg)}.metrics strong{display:block;font-size:17px}.metrics span{font-size:12px;color:var(--muted)}
 .actions,.chunk-actions,.plan-actions,.tile-foot,.section-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.section-head{justify-content:space-between}.actions button,.chunk-actions button,.plan-actions button,.tile-foot button,.section-head button{font-size:13px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.tile,.plan,.chunk{border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:12px}.tile h3,.plan h3,.chunk h4{margin:0;font-size:15px}.tile p,.plan p,.chunk p{color:var(--muted);font-size:13px;margin:5px 0}.tile-foot{justify-content:space-between;margin-top:10px;color:var(--muted);font-size:12px}
-.plan{margin-top:12px}.chunks{display:grid;gap:10px;margin-top:10px}.card-head{display:flex;align-items:center;gap:8px;justify-content:space-between}.status{font-size:10px;text-transform:uppercase;border-radius:12px;padding:2px 8px;border:1px solid var(--border);color:var(--muted)}.status.done,.status.tested{color:var(--green);border-color:var(--green)}.status.in-progress{color:var(--blue);border-color:var(--blue)}.status.blocked{color:var(--red);border-color:var(--red)}.status.pending{color:var(--amber);border-color:var(--amber)}
-.meta{font-size:12px;color:var(--muted);margin:5px 0}.meta code{font-size:11px;margin-right:4px}.request-box{display:grid;gap:8px}.request-box textarea{width:100%;min-height:80px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.tile,.plan,.chunk,.memory-card{border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:12px}.tile h3,.plan h3,.chunk h4,.memory-card h3{margin:0;font-size:15px}.tile p,.plan p,.chunk p,.memory-card p{color:var(--muted);font-size:13px;margin:5px 0}.tile-foot{justify-content:space-between;margin-top:10px;color:var(--muted);font-size:12px}
+.plan,.memory-group{margin-top:12px}.chunks{display:grid;gap:10px;margin-top:10px}.card-head{display:flex;align-items:center;gap:8px;justify-content:space-between}.status{font-size:10px;text-transform:uppercase;border-radius:12px;padding:2px 8px;border:1px solid var(--border);color:var(--muted)}.status.done,.status.tested{color:var(--green);border-color:var(--green)}.status.in-progress{color:var(--blue);border-color:var(--blue)}.status.blocked{color:var(--red);border-color:var(--red)}.status.pending,.status.draft{color:var(--amber);border-color:var(--amber)}
+.meta{font-size:12px;color:var(--muted);margin:5px 0}.meta code{font-size:11px;margin-right:4px}.request-box{display:grid;gap:8px}.request-box textarea,.memory-comment{width:100%;min-height:70px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit}.memory-comment{margin:8px 0;min-height:58px;font-size:13px}
 `;
 
 const BODY = `
 ${memoryStatus()}
 ${areaCards()}
+${memoryBrowser()}
 ${planSections()}
 <section class="panel request-box">
   <h2>Ask the agent to add memory</h2>
@@ -177,6 +225,13 @@ function onReady() {
       var action = btn.dataset.action;
       var prompt = '';
       if (action === 'draft-memory-prompt') prompt = document.getElementById('memory-prompt').value.trim();
+      if (action === 'update-memory') {
+        var target = btn.dataset.target || '';
+        var comment = Array.prototype.find.call(document.querySelectorAll('[data-comment-for]'), function (el) {
+          return el.dataset.commentFor === target;
+        });
+        prompt = comment ? comment.value.trim() : '';
+      }
       sendAction(action, btn.dataset.target || null, prompt);
     });
   });
@@ -190,7 +245,7 @@ const html = renderPage({
 	step: "dashboard",
 	title: "okf-memory — project memory plane",
 	subtitle,
-	data: { memory, areas, plans, chunks },
+	data: { memory, areas, memories, plans, chunks },
 	css: CSS,
 	body: BODY,
 	clientJs: JS,

@@ -16,6 +16,30 @@
     { "id": "pitfalls", "title": "Pitfalls", "description": "Known bugs and sharp edges", "count": 2 },
     { "id": "setup", "title": "Setup", "description": "Build, test, and run commands", "count": 1 }
   ],
+  "memories": [
+    {
+      "id": "patterns/safe-browser-rendering",
+      "slug": "safe-browser-rendering",
+      "path": "patterns/safe-browser-rendering.md",
+      "area": "patterns",
+      "type": "Pattern",
+      "title": "Safe browser rendering",
+      "description": "Escape all server-rendered dashboard fields.",
+      "status": "",
+      "files": ["skills/okf/server.mjs"]
+    },
+    {
+      "id": "chunks/draft-dashboard-card",
+      "slug": "draft-dashboard-card",
+      "path": "chunks/draft-dashboard-card.md",
+      "area": "chunks",
+      "type": "Chunk",
+      "title": "Draft dashboard card",
+      "description": "Draft chunk visible before implementation.",
+      "status": "draft",
+      "files": ["skills/okf/server.mjs"]
+    }
+  ],
   "plans": [
     {
       "id": "plans/dashboard-ui",
@@ -31,6 +55,9 @@
       "title": "Render dashboard",
       "description": "Show memory status, areas, plans, chunks, and action buttons.",
       "status": "pending",
+      "size": "small",
+      "linesEstimate": "60",
+      "testsStatus": "green",
       "dependsOn": ["plans/dashboard-ui/design-schema"],
       "files": ["skills/okf/server.mjs"],
       "body": "## Work\n\nRender the project memory plane."

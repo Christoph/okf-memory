@@ -22,13 +22,13 @@ Gathering state is mechanical and fully scripted — do **not** read bundle file
 node <skill-dir>/gather.mjs | node <skill-dir>/server.mjs
 ```
 
-`gather.mjs` resolves the project root (`git rev-parse --show-toplevel` from the cwd; pass an explicit root as its first argument only when the cwd is outside the target repo) and prints the full payload: memory state (`okf_version`, `last_memorized_commit`, concept count, stale file anchors, unmemorized commit count), the five knowledge areas with counts, and every plan/chunk concept under `memory/plans/`. A missing bundle yields `memory.initialized: false` with the standard areas.
+`gather.mjs` resolves the project root (`git rev-parse --show-toplevel` from the cwd; pass an explicit root as its first argument only when the cwd is outside the target repo) and prints the full payload: memory state (`okf_version`, `last_memorized_commit`, concept count, stale file anchors, unmemorized commit count), the five knowledge areas with counts, a lightweight `memories[]` entry for every non-index/non-log concept file, and every plan/chunk concept. Chunks under `memory/chunks/<slug>.md` are identified by slug; legacy chunks under `memory/plans/` are still read for compatibility. A missing bundle yields `memory.initialized: false` with the standard areas.
 
 Read exactly one JSON line from the server's stdout and react to it (see below).
 
 ## Plan and chunk file format
 
-Plans and chunks are normal OKF concepts so they stay clear and human-readable. `gather.mjs` reads them; you write them when handling `create-plan` / `create-chunk` actions.
+Plans and chunks are normal OKF concepts so they stay clear and human-readable. `gather.mjs` reads them; you write them when handling `create-plan` / `create-chunk` actions. Treat an existing `memory/index.md` as state to extend, not a generated file to replace: preserve its frontmatter (`okf_version`, `last_memorized_commit`, and unknown keys) and all existing area links.
 
 Recommended structure:
 
@@ -70,7 +70,7 @@ files:
 ---
 ```
 
-(`gather.mjs` maps these automatically: `type: Plan` files become `plans[]`; `type: Work Chunk` / `type: Chunk` files become `chunks[]`; a concept's `id` is its path minus `.md`; a chunk's `planId` comes from frontmatter `plan:` or its parent plan path. No plan files yet is fine — the dashboard still offers `create-plan`.)
+(`gather.mjs` maps these automatically: `type: Plan` files become `plans[]`; `type: Work Chunk` / `type: Chunk` files become `chunks[]`; every concept also appears in `memories[]` with `id`, `slug`, `path`, `type`, `status`, and `files`. For chunks in `memory/chunks/`, the `chunks[]` `id` is the slug; for legacy plan-scoped chunks, the `id` remains the plan-relative concept path. A chunk's `planId` comes from frontmatter `plan:` or its parent plan path. No plan files yet is fine — the dashboard still offers `create-plan`.)
 
 ## React to dashboard actions
 
@@ -79,13 +79,14 @@ The server returns `{ "type": "dashboard-action", "action": "...", "target": "..
 - `init`: run the `/okf-init` workflow.
 - `consolidate`: run the `/okf-consolidate` workflow.
 - `memorize`: run the `/okf-memorize` workflow.
-- `create-plan`: draft new OKF plan and chunk files, then review the proposed files with the user before writing.
-- `create-chunk`: add a separate `Work Chunk` OKF concept under the target plan, then review before writing.
+- `create-plan`: draft a new OKF plan, review the exact proposed markdown with the user, then on approval write `memory/plans/<plan-slug>.md`, `memory/plans/<plan-slug>/index.md`, regenerate `memory/plans/index.md`, merge the `/plans/` root link if needed, and append `memory/log.md`.
+- `create-chunk`: add a separate `Work Chunk` OKF concept under the target plan, then review the exact proposed markdown before writing.
 - `implement`: read the selected chunk file and its dependencies, implement it, run relevant tests, then update the chunk `status` only after success.
 - `test`: read the selected chunk file, run relevant tests, report results, and update `status: tested` only when tests pass.
 - `mark-done`: verify the selected chunk's requested tests have passed or ask the user for confirmation, then update `status: done`.
-- `draft-memory`: research the target area (`architecture`, `decisions`, `patterns`, `pitfalls`, or `setup`), draft a memory card, and send it through the existing review flow before writing.
+- `draft-memory`: research the target area (`architecture`, `decisions`, `patterns`, `pitfalls`, or `setup`) or target concept path, draft a memory card, and send it through the existing review flow before writing.
 - `draft-memory-prompt`: use `prompt` as the user's requested memory topic, research the repo, draft the appropriate area memory, and send it through review before writing.
+- `update-memory`: resolve `target` as the memory slug shown in the dashboard (if multiple concepts share the slug, ask which `path` to update), read that concept file, use `prompt` as the user's requested change/comment, draft the update through the existing reviewed memory-write flow, and only write after approval. Never mutate memory directly from browser state; preserve frontmatter/unknown keys, update `timestamp`, regenerate affected indexes, append `memory/log.md`, and validate when available. If `prompt` is empty, ask the user what change they want before writing.
 - `close`: report that no action was selected.
 
 For `cancel` / `timeout`, write nothing and explicitly report that the dashboard was cancelled/timed out.
@@ -94,9 +95,13 @@ For `cancel` / `timeout`, write nothing and explicitly report that the dashboard
 
 When creating or updating plan/chunk concepts:
 
-1. Preserve OKF frontmatter and human-readable markdown bodies.
+For `create-plan`, write the approved plan as `memory/plans/<plan-slug>.md` with `type: Plan`, `status`, `branch`, `created`, `timestamp`, and any relevant `files:` anchors. Also create `memory/plans/<plan-slug>/index.md` for that plan's chunks and update `memory/plans/index.md` with the plan title and one-line description.
+
+For `create-chunk`, write the approved chunk as `memory/plans/<plan-slug>/<chunk-slug>.md` with `type: Work Chunk`, `plan: plans/<plan-slug>`, `status`, `size`, `lines_estimate`, full OKF IDs in `depends_on`, `files:`, implementation notes, and test expectations. Regenerate the plan directory index and the parent plan's `# Chunks` section with bundle-absolute links.
+
+1. Preserve OKF frontmatter, unknown metadata keys, and human-readable markdown bodies.
 2. Keep each chunk in a separate `.md` file.
 3. Regenerate `memory/plans/index.md` and the affected plan directory `index.md`.
-4. Regenerate root `memory/index.md` links if a new `plans/` area is introduced.
+4. Merge the `Plans` area link into root `memory/index.md` only if it is missing; never overwrite existing root frontmatter, `last_memorized_commit`, or memory area links.
 5. Append a newest-first `memory/log.md` entry with a bold lead such as `**Plan**`, `**Chunk**`, or `**Update**`.
 6. Run the validator when available.

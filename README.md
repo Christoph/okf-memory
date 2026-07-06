@@ -4,7 +4,7 @@
 
 Project memory for coding agents, stored as an OKF knowledge bundle in a target repo's `memory/` directory. It captures architecture, decisions, patterns/conventions, pitfalls, and setup so agents can self-discover only the knowledge they need.
 
-The bundle follows `docs/OKF_SPEC.md` progressive disclosure: start at `memory/index.md`, follow an area index, then open only relevant concept docs. `memory/index.md` includes `last_memorized_commit` as tolerated OKF extension metadata so `/okf-memorize` knows where to resume.
+The bundle follows `docs/OKF_SPEC.md` progressive disclosure: start at `memory/index.md`, follow an area index, then open only relevant concept docs. `memory/index.md` includes `last_memorized_commit` as tolerated OKF extension metadata so `/okf-memorize` knows where to resume. New bundles also include `memory/EXTENSIONS.md`, an OKF `Reference` concept that tells other extensions how to read concept IDs/slugs, preserve unknown metadata, write safe updates, regenerate indexes, append `memory/log.md`, and validate the bundle.
 
 ## Commands
 
@@ -13,7 +13,7 @@ The bundle follows `docs/OKF_SPEC.md` progressive disclosure: start at `memory/i
 - `/okf-consolidate` — review/update/merge/delete existing memories and flag stale file references.
 - `/okf-memorize` — draft memories from commits since `last_memorized_commit`, flag conflicts, then advance the pointer on approval.
 
-Plans and implementation chunks are represented as normal OKF markdown concepts under `memory/plans/`; each chunk is its own `.md` file with frontmatter such as `type: Work Chunk`, `status: pending`, `depends_on: [...]`, and `files: [...]` so the dashboard remains human-readable and diffable.
+Plans and implementation chunks are represented as normal OKF markdown concepts. Legacy plan-scoped chunks may live under `memory/plans/`, while iterator-style chunks live under `memory/chunks/<slug>.md`; for those files, the slug is the stable chunk identity used by the dashboard and tooling. Each chunk has frontmatter such as `type: Chunk` or `type: Work Chunk`, `status: draft|pending|done`, `depends_on: [...]`, and `files: [...]` so draft and pending work remains human-readable and diffable. Adding plans to an existing OKF bundle is non-destructive: keep root `memory/index.md` frontmatter such as `okf_version` and `last_memorized_commit`, preserve existing area links and unknown keys, and add plan/chunk links only when missing.
 
 ## Install: Claude Code
 
@@ -84,7 +84,9 @@ Before starting any task:
 1. Read `memory/index.md` to see what knowledge areas exist.
 2. Follow links into the relevant area index and open only the concept docs
    that match your task (progressive disclosure — don't read everything).
-3. Unsure whether memory covers a topic? `grep -ril "<keyword>" memory/`.
+3. If `memory/EXTENSIONS.md` exists, follow it when reading or updating memory
+   from tools, skills, or extensions.
+4. Unsure whether memory covers a topic? `grep -ril "<keyword>" memory/`.
 
 Treat `memory/` as authoritative for how to work in this codebase.
 After fixing a bug or making a notable decision, suggest running /okf-memorize.
