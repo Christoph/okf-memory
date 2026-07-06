@@ -17,11 +17,19 @@ Draft and review new okf-memory entries from commits since `last_memorized_commi
 
 ## Determine commit range
 
-1. Set `headCommit=$(git rev-parse HEAD)`.
-2. Read `last_memorized_commit` from `memory/index.md` as `baseCommit`.
-3. Validate it with `git cat-file -e "$baseCommit^{commit}"`.
-4. If invalid, warn that history may have been rebased/force-pushed. Try `git merge-base HEAD "$baseCommit"`; if that fails or is not useful, offer a full-history review or abort.
-5. If `git log --oneline "$baseCommit..HEAD"` is empty, report `nothing to memorize` and stop.
+The range is computed by script — do **not** run the git plumbing yourself:
+
+```bash
+node ../okf/gather.mjs --step range
+```
+
+It prints `{ head, lastMemorizedCommit, baseValid, mergeBaseFallback, effectiveBase, commitCount, commits, nothingToMemorize }`:
+
+- `nothingToMemorize: true` → report `nothing to memorize` and stop. An empty or short range is expected in repos driven by iterator: `/iterator-implement` evaluates each accepted chunk wave and advances `last_memorized_commit` itself, so only commits made outside that flow accumulate here.
+- `baseValid: false` with a `mergeBaseFallback` → history was rebased/force-pushed; warn the user and continue from `effectiveBase`.
+- `baseValid: false` and no fallback → offer a full-history review or abort.
+
+Use `effectiveBase` as `baseCommit` and `head` as `headCommit` everywhere below.
 
 ## Study changes
 
@@ -55,43 +63,24 @@ Also include the contradicted memory as an `action: "keep"` card so both sides a
 
 ## Review
 
-Invoke the shared review server:
+Invoke the shared review server with `apply: true` so an approval is applied by the deterministic writer (`../okf-init/write.mjs`) before the result reaches you — never hand-author memory files, indexes, the log, or the pointer:
 
 ```bash
 node ../okf-init/server.mjs <<'OKF_PAYLOAD'
-{ "mode": "memorize", "project": "...", "bundlePath": "memory/", "round": 1, "baseCommit": "...", "headCommit": "...", "commitCount": 1, "areas": [], "memories": [] }
+{ "mode": "memorize", "apply": true, "project": "<git root>", "bundlePath": "memory/", "round": 1, "baseCommit": "...", "headCommit": "...", "commitCount": 1, "areas": [], "memories": [] }
 OKF_PAYLOAD
 ```
+
+`headCommit` must be the reviewed head from the range gather, not `HEAD now` — the writer advances `last_memorized_commit` to exactly this sha on approval, which avoids racing commits made during review.
 
 ## React
 
 - `review-feedback`: revise commented drafts plus the general note, increment `round`, and invoke the server again. Write nothing mid-loop.
-- `cancel` / `timeout`: write nothing, explicitly report the cancellation/timeout, and do **not** advance `last_memorized_commit`.
-- `review-approved`: apply verdicts.
-
-Verdicts:
-
-- `accept`: write the proposed concept body/frontmatter.
-- `reject`: discard the proposal and leave disk unchanged.
-- `keep`: leave the existing concept unchanged.
-- `delete`: remove the existing concept file.
+- `cancel` / `timeout`: nothing was written and `last_memorized_commit` did **not** advance; explicitly report the cancellation/timeout.
+- `review-approved`: the verdicts are **already applied** — the result line carries `applied` with the writer's outcome (`written`, `deleted`, `kept`, `rejected`, `advancedTo`, `validation`). Verdict semantics, for reference: `accept` writes the proposed concept, `reject` discards the proposal, `keep` leaves the existing concept, `delete` removes it. The writer also regenerated the affected area indexes and root index links (preserving all foreign content, including iterator's plan/chunk links), set `last_memorized_commit` to the reviewed `headCommit`, appended newest-first `memory/log.md` entries, and ran the bundle validator.
 
 ## Finish on approval
 
-Regenerate area indexes and `memory/index.md`, preserving OKF fields and setting:
+Read `applied` from the result. If `applied.ok` is false (or `applied.validation.ok` is false), show the error and fix it through another review round — do not patch files by hand.
 
-```yaml
-last_memorized_commit: <headCommit from payload>
-```
-
-Use the reviewed `headCommit`, not `HEAD now`, to avoid racing commits made during review.
-
-Append newest-first `memory/log.md` entries under today's ISO date using bold leads such as `**Creation**`, `**Update**`, and `**Deletion**`.
-
-Run:
-
-```bash
-node scripts/validate.mjs memory/
-```
-
-Report created/updated/deleted/rejected counts, conflicts resolved or left, and the advanced commit pointer.
+Otherwise report created/updated/deleted/rejected counts, conflicts resolved or left, and the advanced commit pointer (`applied.advancedTo`).

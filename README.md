@@ -15,6 +15,10 @@ The bundle follows `docs/OKF_SPEC.md` progressive disclosure: start at `memory/i
 
 Plans and implementation chunks are represented as normal OKF markdown concepts. Legacy plan-scoped chunks may live under `memory/plans/`, while iterator-style chunks live under `memory/chunks/<slug>.md`; for those files, the slug is the stable chunk identity used by the dashboard and tooling. Each chunk has frontmatter such as `type: Chunk` or `type: Work Chunk`, `status: draft|pending|done`, `depends_on: [...]`, and `files: [...]` so draft and pending work remains human-readable and diffable. Adding plans to an existing OKF bundle is non-destructive: keep root `memory/index.md` frontmatter such as `okf_version` and `last_memorized_commit`, preserve existing area links and unknown keys, and add plan/chunk links only when missing.
 
+## iterator integration
+
+okf-memory and [iterator](https://github.com/Christoph/iterator) share one `memory/` bundle: okf-memory owns the knowledge areas and the `last_memorized_commit` pointer, iterator owns `plan.md`/`chunks/`/`design.md`, and `index.md`/`log.md` are joint. iterator's deterministic writer merges (never overwrites) the root index, so okf metadata and area links survive every plan/chunk regeneration. When `/iterator-implement` lands an accepted chunk wave, it evaluates the diff for durable knowledge, shows proposed memory creates/updates as toggleable cards in its commit review, writes the accepted ones into the areas (regenerating area indexes and appending `memory/log.md`), and advances `last_memorized_commit` to the accepted commit. The knowledge base stays current as work lands; `/okf-memorize` only has a backlog for commits made outside the iterator flow.
+
 ## Install: Claude Code
 
 From a published repository:

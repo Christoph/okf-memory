@@ -145,3 +145,14 @@ test("skill files include Claude-discoverable YAML frontmatter", () => {
 		);
 	}
 });
+
+test("validator tolerates iterator's commits block list on chunk concepts", () => {
+	const bundle = makeBundle({
+		"index.md":
+			'---\nokf_version: "0.1"\nlast_memorized_commit: abc123\n---\n# Memory\n',
+		"chunks/index.md": "# Chunks\n",
+		"chunks/auth-middleware.md":
+			'---\ntype: Chunk\ntitle: Auth middleware\ndescription: JWT middleware.\nstatus: done\ndepends_on: []\nfiles: ["src/auth.ts"]\ntimestamp: 2026-07-06T00:00:00.000Z\ndone: 2026-07-06\ncommits:\n  - sha: 7bfc791b2f33c3661ce1e69e02198bd156af1f2d\n    kind: implement\n    date: 2026-07-06\n---\n# Implementation notes\n',
+	});
+	assert.deepEqual(validateBundle(bundle), { ok: true, errors: [] });
+});

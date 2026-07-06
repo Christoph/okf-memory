@@ -141,7 +141,14 @@ function browserCommand(remote) {
 	return 'xdg-open "%s"';
 }
 
-export async function serve({ step = "app", html }) {
+/**
+ * Serve one review round. `onSubmit(result)` — optional — runs after the
+ * browser answers and may return a transformed object to print instead (used
+ * to apply purely-mechanical results, e.g. review verdicts, in code before
+ * the agent ever sees them). A throwing onSubmit annotates the original
+ * result with { applied: { ok: false, error } } rather than losing it.
+ */
+export async function serve({ step = "app", html, onSubmit }) {
 	const startPort = parseInt(process.env.OKF_PORT || "8888", 10);
 	const MAX_PORT_RETRIES = 20;
 	const remote = isRemoteSession();
@@ -196,12 +203,25 @@ export async function serve({ step = "app", html }) {
 			}
 			let body = "";
 			req.on("data", (c) => (body += c));
-			req.on("end", () => {
+			req.on("end", async () => {
 				res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
 				res.end(doneHtml());
 				if (!done) {
 					done = true;
-					process.stdout.write((body.trim() || "{}") + "\n");
+					let out = body.trim() || "{}";
+					if (onSubmit) {
+						try {
+							const transformed = await onSubmit(JSON.parse(out));
+							if (transformed) out = JSON.stringify(transformed);
+						} catch (e) {
+							try {
+								const parsed = JSON.parse(out);
+								parsed.applied = { ok: false, error: e.message };
+								out = JSON.stringify(parsed);
+							} catch {}
+						}
+					}
+					process.stdout.write(out + "\n");
 					try {
 						server.close();
 					} catch {}
