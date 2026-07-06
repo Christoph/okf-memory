@@ -53,6 +53,10 @@ type: Work Chunk
 title: Render dashboard
 description: Render state and actions.
 status: pending
+plan: plans/dashboard-ui
+size: small
+lines_estimate: 60
+tests_status: green
 depends_on:
   - plans/dashboard-ui/design-schema
 files:
@@ -92,6 +96,9 @@ test("gather builds the dashboard payload from bundle + git state", () => {
 		]);
 		assert.equal(p.chunks.length, 1);
 		assert.equal(p.chunks[0].planId, "plans/dashboard-ui");
+		assert.equal(p.chunks[0].size, "small");
+		assert.equal(p.chunks[0].linesEstimate, "60");
+		assert.equal(p.chunks[0].testsStatus, "green");
 		assert.deepEqual(p.chunks[0].dependsOn, [
 			"plans/dashboard-ui/design-schema",
 		]);

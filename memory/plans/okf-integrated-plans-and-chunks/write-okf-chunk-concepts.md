@@ -2,7 +2,8 @@
 type: Work Chunk
 title: Write OKF chunk concepts
 description: Write each implementation chunk as a separate type Work Chunk concept beneath its plan directory.
-status: pending
+status: done
+done: 2026-07-06
 size: medium
 lines_estimate: 160
 plan: plans/okf-integrated-plans-and-chunks
@@ -12,7 +13,7 @@ files:
   - skills/okf/SKILL.md
   - skills/okf/gather.mjs
   - skills/okf/server.mjs
-timestamp: 2026-07-06T13:24:59Z
+timestamp: 2026-07-06T14:07:37Z
 tags:
   - planning
   - chunks

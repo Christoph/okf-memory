@@ -17,6 +17,9 @@ test("dashboard renders memory state, plans, chunks, and action callbacks", asyn
 		assert.match(page.text, /Memory status/);
 		assert.match(page.text, /Dashboard UI/);
 		assert.match(page.text, /Render dashboard/);
+		assert.match(page.text, /small/);
+		assert.match(page.text, /~60 lines/);
+		assert.match(page.text, /tests: green/);
 		assert.match(page.text, /Draft memory from prompt/);
 
 		const payload = {

@@ -96,6 +96,8 @@ When creating or updating plan/chunk concepts:
 
 For `create-plan`, write the approved plan as `memory/plans/<plan-slug>.md` with `type: Plan`, `status`, `branch`, `created`, `timestamp`, and any relevant `files:` anchors. Also create `memory/plans/<plan-slug>/index.md` for that plan's chunks and update `memory/plans/index.md` with the plan title and one-line description.
 
+For `create-chunk`, write the approved chunk as `memory/plans/<plan-slug>/<chunk-slug>.md` with `type: Work Chunk`, `plan: plans/<plan-slug>`, `status`, `size`, `lines_estimate`, full OKF IDs in `depends_on`, `files:`, implementation notes, and test expectations. Regenerate the plan directory index and the parent plan's `# Chunks` section with bundle-absolute links.
+
 1. Preserve OKF frontmatter, unknown metadata keys, and human-readable markdown bodies.
 2. Keep each chunk in a separate `.md` file.
 3. Regenerate `memory/plans/index.md` and the affected plan directory `index.md`.

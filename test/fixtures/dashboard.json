@@ -31,6 +31,9 @@
       "title": "Render dashboard",
       "description": "Show memory status, areas, plans, chunks, and action buttons.",
       "status": "pending",
+      "size": "small",
+      "linesEstimate": "60",
+      "testsStatus": "green",
       "dependsOn": ["plans/dashboard-ui/design-schema"],
       "files": ["skills/okf/server.mjs"],
       "body": "## Work\n\nRender the project memory plane."

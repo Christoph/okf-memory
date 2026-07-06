@@ -7,8 +7,8 @@
  *     project, bundlePath, round,
  *     memory: { initialized, okfVersion?, lastMemorizedCommit?, conceptCount?, staleCount?, unmemorizedCommitCount? },
  *     areas: [{ id, title, description, count }],
- *     plans: [{ id, title, description, status, chunks: [chunkId] }],
- *     chunks: [{ id, planId, title, description, status, dependsOn, files, body }]
+ *     plans: [{ id, title, description, status, branch, created, files, chunks: [chunkId] }],
+ *     chunks: [{ id, planId, title, description, status, size, linesEstimate, testsStatus, dependsOn, files, body }]
  *   }
  *
  * output (exactly one JSON line on stdout):
@@ -98,9 +98,14 @@ function chunkCard(c) {
 		Array.isArray(c.files) && c.files.length
 			? c.files.map((f) => `<code>${escHtml(f)}</code>`).join(" ")
 			: '<span class="muted">none</span>';
+	const details = [c.size, c.linesEstimate ? `~${c.linesEstimate} lines` : "", c.testsStatus ? `tests: ${c.testsStatus}` : ""]
+		.filter(Boolean)
+		.map((d) => `<span>${escHtml(d)}</span>`)
+		.join(" · ");
 	return `<article class="chunk" data-id="${escHtml(c.id)}">
   <div class="card-head"><h4>${escHtml(c.title || c.id)}</h4>${statusChip(c.status)}</div>
   <p>${escHtml(c.description || "")}</p>
+  ${details ? `<div class="meta">${details}</div>` : ""}
   <div class="meta"><span>depends on: ${deps}</span></div>
   <div class="meta"><span>files: ${files}</span></div>
   <div class="chunk-actions">
