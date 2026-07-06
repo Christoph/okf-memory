@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { startServer, request, withPath, sleep } from "./helpers.mjs";
 
 async function close(server) {
@@ -106,6 +109,57 @@ test("OKF_REMOTE=0 forces a loopback bind even inside a container", async () => 
 		await server.waitForExit();
 	} finally {
 		await close(server);
+	}
+});
+
+test("GET /__okf/status identifies the server without auth", async () => {
+	const server = startServer("init.json");
+	try {
+		const url = await server.ready;
+		const res = await request(withPath(url, "/__okf/status"));
+		assert.equal(res.status, 200);
+		const status = JSON.parse(res.text);
+		assert.equal(status.app, "okf-memory");
+		assert.equal(status.pid, server.child.pid);
+	} finally {
+		await close(server);
+	}
+});
+
+test("SIGTERM resolves the contract with {\"type\":\"cancel\"} and exit 0", async () => {
+	const server = startServer("init.json");
+	try {
+		await server.ready;
+		server.child.kill("SIGTERM");
+		const code = await server.waitForExit();
+		assert.equal(code, 0);
+		assert.equal(server.stdout.trim(), JSON.stringify({ type: "cancel" }));
+	} finally {
+		await close(server);
+	}
+});
+
+test("a new server takes over the fixed port from a lingering one", async () => {
+	// Shared registry + fixed port: the second server must evict the first
+	// and land on the SAME port — the port a sandbox forwards (8888:8888).
+	const shared = {
+		OKF_REGISTRY: join(tmpdir(), `okf-takeover-${randomUUID()}.json`),
+		OKF_PORT: String(18_000 + Math.floor(Math.random() * 4000)),
+	};
+	const first = startServer("init.json", shared);
+	const firstUrl = await first.ready;
+	const second = startServer("init.json", shared);
+	try {
+		const secondUrl = await second.ready;
+		const code = await first.waitForExit();
+		assert.equal(code, 0);
+		assert.equal(first.stdout.trim(), JSON.stringify({ type: "cancel" }));
+		assert.equal(new URL(secondUrl).port, new URL(firstUrl).port);
+		assert.match(second.stderr, /closing previous UI server/);
+		assert.equal(second.exited, false);
+	} finally {
+		await close(first);
+		await close(second);
 	}
 });
 

@@ -1,6 +1,8 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import http from "node:http";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -25,6 +27,9 @@ export function startServer(input, extraEnv = {}, command = serverPath) {
 			OKF_NO_OPEN: "1",
 			OKF_PORT: "0",
 			OKF_CANCEL_GRACE_MS: "250",
+			// Test files run in parallel; a private registry per spawn keeps
+			// the single-instance takeover from killing a sibling test server.
+			OKF_REGISTRY: join(tmpdir(), `okf-test-${randomUUID()}.json`),
 			...extraEnv,
 		},
 		stdio: ["pipe", "pipe", "pipe"],
