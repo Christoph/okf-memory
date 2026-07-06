@@ -1,6 +1,9 @@
 # Memory Update Log
 
 ## 2026-07-06
+* **Update**: Applied 2 chunk adjustment(s).
+* **Update**: 2 chunk(s) written.
+* **Update**: Plan "Manifest-backed plan dependencies" approved on branch iterator/preserve-root-memory-index.
 * **Implementation**: Committed chunk(comment-driven-memory-updates) on branch iterator/preserve-root-memory-index.
 * **Implementation**: Committed chunk(dashboard-all-memories-browser) on branch iterator/preserve-root-memory-index.
 * **Implementation**: Committed chunk(slugged-draft-chunk-model) on branch iterator/preserve-root-memory-index.
