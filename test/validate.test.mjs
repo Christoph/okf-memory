@@ -38,6 +38,16 @@ test("validator passes a conforming OKF memory bundle", () => {
 	assert.deepEqual(validateBundle(bundle), { ok: true, errors: [] });
 });
 
+test("validator accepts an extension contract concept", () => {
+	const bundle = makeBundle({
+		"index.md":
+			'---\nokf_version: "0.1"\n---\n# Memory\n\n* [Extension contract](EXTENSIONS.md) - How extensions should read and update memory.\n',
+		"EXTENSIONS.md":
+			"---\ntype: Reference\ntitle: okf-memory extension contract\ndescription: How extensions read and update the bundle.\ntags:\n  - extensions\ntimestamp: 2026-07-06T00:00:00.000Z\n---\n# Extension contract\n",
+	});
+	assert.deepEqual(validateBundle(bundle), { ok: true, errors: [] });
+});
+
 test("validator accepts integrated plan and chunk concepts", () => {
 	const bundle = makeBundle({
 		"index.md":
