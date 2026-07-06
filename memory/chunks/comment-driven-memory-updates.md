@@ -2,13 +2,14 @@
 type: Chunk
 title: Comment-driven memory updates
 description: Let users request updates for any displayed memory via a comment and return deterministic dashboard actions that the skill can turn into reviewed memory edits.
-status: pending
+status: done
 size: medium
 lines_estimate: 150
 depends_on: [dashboard-all-memories-browser]
 files: ["skills/okf/server.mjs", "skills/okf/SKILL.md", "test/dashboard.test.mjs", "test/server.test.mjs"]
-timestamp: "2026-07-06T14:36:18.550Z"
+timestamp: "2026-07-06T15:23:35.855Z"
 tags: []
+done: 2026-07-06
 ---
 
 # Implementation notes

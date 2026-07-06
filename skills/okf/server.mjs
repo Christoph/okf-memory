@@ -102,7 +102,11 @@ function memoryCard(m) {
   <p>${escHtml(m.description || "")}</p>
   <div class="meta"><span>type: <code>${escHtml(type)}</code></span> <span>slug: <code>${escHtml(m.slug || m.id)}</code></span> <span>path: <code>${escHtml(m.path || `${m.id}.md`)}</code></span></div>
   <div class="meta"><span>files: ${files}</span></div>
-  <div class="chunk-actions"><button data-action="draft-memory" data-target="${escHtml(m.id)}">Add related memory</button></div>
+  <textarea class="memory-comment" data-comment-for="${escHtml(m.slug || m.id)}" placeholder="Comment with the update this memory needs."></textarea>
+  <div class="chunk-actions">
+    <button data-action="update-memory" data-target="${escHtml(m.slug || m.id)}">Update via comment</button>
+    <button data-action="draft-memory" data-target="${escHtml(m.id)}">Add related memory</button>
+  </div>
 </article>`;
 }
 
@@ -194,7 +198,7 @@ const CSS = `
 .actions,.chunk-actions,.plan-actions,.tile-foot,.section-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.section-head{justify-content:space-between}.actions button,.chunk-actions button,.plan-actions button,.tile-foot button,.section-head button{font-size:13px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.tile,.plan,.chunk,.memory-card{border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:12px}.tile h3,.plan h3,.chunk h4,.memory-card h3{margin:0;font-size:15px}.tile p,.plan p,.chunk p,.memory-card p{color:var(--muted);font-size:13px;margin:5px 0}.tile-foot{justify-content:space-between;margin-top:10px;color:var(--muted);font-size:12px}
 .plan,.memory-group{margin-top:12px}.chunks{display:grid;gap:10px;margin-top:10px}.card-head{display:flex;align-items:center;gap:8px;justify-content:space-between}.status{font-size:10px;text-transform:uppercase;border-radius:12px;padding:2px 8px;border:1px solid var(--border);color:var(--muted)}.status.done,.status.tested{color:var(--green);border-color:var(--green)}.status.in-progress{color:var(--blue);border-color:var(--blue)}.status.blocked{color:var(--red);border-color:var(--red)}.status.pending,.status.draft{color:var(--amber);border-color:var(--amber)}
-.meta{font-size:12px;color:var(--muted);margin:5px 0}.meta code{font-size:11px;margin-right:4px}.request-box{display:grid;gap:8px}.request-box textarea{width:100%;min-height:80px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit}
+.meta{font-size:12px;color:var(--muted);margin:5px 0}.meta code{font-size:11px;margin-right:4px}.request-box{display:grid;gap:8px}.request-box textarea,.memory-comment{width:100%;min-height:70px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit}.memory-comment{margin:8px 0;min-height:58px;font-size:13px}
 `;
 
 const BODY = `
@@ -221,6 +225,13 @@ function onReady() {
       var action = btn.dataset.action;
       var prompt = '';
       if (action === 'draft-memory-prompt') prompt = document.getElementById('memory-prompt').value.trim();
+      if (action === 'update-memory') {
+        var target = btn.dataset.target || '';
+        var comment = Array.prototype.find.call(document.querySelectorAll('[data-comment-for]'), function (el) {
+          return el.dataset.commentFor === target;
+        });
+        prompt = comment ? comment.value.trim() : '';
+      }
       sendAction(action, btn.dataset.target || null, prompt);
     });
   });

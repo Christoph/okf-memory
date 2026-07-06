@@ -7,9 +7,13 @@ size: medium
 lines_estimate: 180
 depends_on: [slugged-draft-chunk-model, extension-memory-contract]
 files: ["skills/okf/gather.mjs", "skills/okf/server.mjs", "test/gather.test.mjs", "test/dashboard.test.mjs", "test/fixtures/dashboard.json"]
-timestamp: "2026-07-06T15:11:48.148Z"
+timestamp: "2026-07-06T15:12:00.316Z"
 tags: []
 done: 2026-07-06
+commits:
+  - sha: 6b07b1b8d37cd77c885b07acff05d66fada535e9
+    kind: implement
+    date: 2026-07-06
 ---
 
 # Implementation notes

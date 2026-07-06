@@ -22,7 +22,7 @@ Gathering state is mechanical and fully scripted — do **not** read bundle file
 node <skill-dir>/gather.mjs | node <skill-dir>/server.mjs
 ```
 
-`gather.mjs` resolves the project root (`git rev-parse --show-toplevel` from the cwd; pass an explicit root as its first argument only when the cwd is outside the target repo) and prints the full payload: memory state (`okf_version`, `last_memorized_commit`, concept count, stale file anchors, unmemorized commit count), the five knowledge areas with counts, and every plan/chunk concept under `memory/plans/`. A missing bundle yields `memory.initialized: false` with the standard areas.
+`gather.mjs` resolves the project root (`git rev-parse --show-toplevel` from the cwd; pass an explicit root as its first argument only when the cwd is outside the target repo) and prints the full payload: memory state (`okf_version`, `last_memorized_commit`, concept count, stale file anchors, unmemorized commit count), the five knowledge areas with counts, a lightweight `memories[]` entry for every non-index/non-log concept file, and every plan/chunk concept. Chunks under `memory/chunks/<slug>.md` are identified by slug; legacy chunks under `memory/plans/` are still read for compatibility. A missing bundle yields `memory.initialized: false` with the standard areas.
 
 Read exactly one JSON line from the server's stdout and react to it (see below).
 
@@ -70,7 +70,7 @@ files:
 ---
 ```
 
-(`gather.mjs` maps these automatically: `type: Plan` files become `plans[]`; `type: Work Chunk` / `type: Chunk` files become `chunks[]`; a concept's `id` is its path minus `.md`; a chunk's `planId` comes from frontmatter `plan:` or its parent plan path. No plan files yet is fine — the dashboard still offers `create-plan`.)
+(`gather.mjs` maps these automatically: `type: Plan` files become `plans[]`; `type: Work Chunk` / `type: Chunk` files become `chunks[]`; every concept also appears in `memories[]` with `id`, `slug`, `path`, `type`, `status`, and `files`. For chunks in `memory/chunks/`, the `chunks[]` `id` is the slug; for legacy plan-scoped chunks, the `id` remains the plan-relative concept path. A chunk's `planId` comes from frontmatter `plan:` or its parent plan path. No plan files yet is fine — the dashboard still offers `create-plan`.)
 
 ## React to dashboard actions
 
@@ -84,8 +84,9 @@ The server returns `{ "type": "dashboard-action", "action": "...", "target": "..
 - `implement`: read the selected chunk file and its dependencies, implement it, run relevant tests, then update the chunk `status` only after success.
 - `test`: read the selected chunk file, run relevant tests, report results, and update `status: tested` only when tests pass.
 - `mark-done`: verify the selected chunk's requested tests have passed or ask the user for confirmation, then update `status: done`.
-- `draft-memory`: research the target area (`architecture`, `decisions`, `patterns`, `pitfalls`, or `setup`), draft a memory card, and send it through the existing review flow before writing.
+- `draft-memory`: research the target area (`architecture`, `decisions`, `patterns`, `pitfalls`, or `setup`) or target concept path, draft a memory card, and send it through the existing review flow before writing.
 - `draft-memory-prompt`: use `prompt` as the user's requested memory topic, research the repo, draft the appropriate area memory, and send it through review before writing.
+- `update-memory`: resolve `target` as the memory slug shown in the dashboard (if multiple concepts share the slug, ask which `path` to update), read that concept file, use `prompt` as the user's requested change/comment, draft the update through the existing reviewed memory-write flow, and only write after approval. Never mutate memory directly from browser state; preserve frontmatter/unknown keys, update `timestamp`, regenerate affected indexes, append `memory/log.md`, and validate when available. If `prompt` is empty, ask the user what change they want before writing.
 - `close`: report that no action was selected.
 
 For `cancel` / `timeout`, write nothing and explicitly report that the dashboard was cancelled/timed out.
