@@ -276,7 +276,9 @@ PAYLOAD
 
 The server should:
 
-1. Bind only to `127.0.0.1`.
+1. Bind to `127.0.0.1` locally; in remote sessions (SSH, container/microVM
+   sandbox) bind `0.0.0.0` so a forwarded port can reach it (see
+   "Remote sessions" below).
 2. Generate a per-run random token and require it on every request.
 3. Check the `Host` header to prevent DNS rebinding.
 4. Retry or use an ephemeral port if the preferred port is busy.
@@ -284,7 +286,7 @@ The server should:
 6. Escape embedded JSON so values containing `</script>` cannot break out of
    inline scripts.
 7. Use env vars for knobs, prefixed with your app name (`<APP>_NO_OPEN`,
-   `<APP>_PORT`, etc.).
+   `<APP>_PORT`, `<APP>_REMOTE`, `<APP>_BIND_HOST`, etc.).
 
 Minimal server skeleton:
 
@@ -385,6 +387,77 @@ For multi-step browser UIs, keep shared helpers in `lib/` while developing,
 then copy them into each skill folder before publishing. Skill folders should be
 self-contained so they still work when users copy or filter individual skills.
 Add a test that byte-compares bundled copies against `lib/` to prevent drift.
+
+### Remote sessions: reaching the UI from the host
+
+When pi runs inside a Docker sandbox, devcontainer, or SSH session, the
+browser lives on the *host*, not next to the server. Two things break:
+
+1. `127.0.0.1` inside the sandbox is not the host's `127.0.0.1` — a
+   loopback-bound server is unreachable from the host even with a port
+   forward in place (`ERR_CONNECTION_REFUSED`).
+2. `open`/`xdg-open` inside a headless sandbox has no browser to launch.
+
+The fix (this is what `lib/server.mjs` implements): detect remote sessions,
+bind all interfaces there, skip the opener, and print a URL the *host* can
+click. Detection order — explicit override, then SSH markers, then container
+markers:
+
+```js
+export function isRemoteSession(env = process.env) {
+  const override = String(env.<APP>_REMOTE ?? "").toLowerCase();
+  if (override === "1" || override === "true") return true;
+  if (override === "0" || override === "false") return false;
+  if (env.SSH_TTY || env.SSH_CONNECTION) return true;
+  return existsSync("/.dockerenv") || existsSync("/run/.containerenv");
+}
+```
+
+Behavior by mode:
+
+| | local | remote |
+| --- | --- | --- |
+| bind host | `127.0.0.1` | `0.0.0.0` (override: `<APP>_BIND_HOST`) |
+| port | fixed default, walk up if busy (`<APP>_PORT`) | same — a fixed port is what makes forwarding practical |
+| browser | auto-open via `open`/`xdg-open`/`BROWSER` | skip; print `http://127.0.0.1:<port>/` to stderr for the host |
+
+Always print the URL with `127.0.0.1` as the display host, never `0.0.0.0` —
+`0.0.0.0` is a bind address, not a clickable URL, and through a forward the
+host reaches the server on its own loopback anyway.
+
+The server side alone is not enough: the sandbox must also publish the port
+to the host. Some environments detect microVM/sandbox images automatically
+(`/.dockerenv` is absent there), so set `<APP>_REMOTE=1` explicitly in the
+sandbox image. The variable name is always the uppercase app name plus
+`_REMOTE` — for this package (`okf-memory` → `OKF`) that is `OKF_REMOTE`:
+
+```dockerfile
+ENV <APP>_REMOTE=1
+# e.g. for okf-memory:
+ENV OKF_REMOTE=1
+```
+
+Per environment:
+
+- **Docker sandboxes (`sbx`)**: publish with the explicit `host:container`
+  form — `sbx ports <sandbox> --publish 8888:8888`. A bare `--publish 8888`
+  maps to a *random* host port (and adds a new one on every call), so the
+  printed URL will not match. Publishing is per sandbox; do it once per
+  sandbox (it persists across restarts of that sandbox).
+- **VS Code devcontainers / Codespaces**: ports are forwarded automatically;
+  check the Ports tab for the host-side address.
+- **Plain SSH**: forward manually, e.g. `ssh -L 8888:localhost:8888 host` or
+  a `LocalForward` entry in `~/.ssh/config`.
+
+Then open the printed URL (`http://127.0.0.1:8888/`) in the host browser. If
+the default port was busy inside the sandbox the server walks up (8889, …)
+and the stderr line shows the real port — it must match the published one,
+so pin `<APP>_PORT` if collisions are common.
+
+Security: binding `0.0.0.0` exposes the UI to whatever network the sandbox
+is attached to. Keep the host-side publish on loopback (`127.0.0.1:8888`,
+not `0.0.0.0:8888`), and keep token/Host checks if the sandbox shares a
+network with other workloads.
 
 ---
 
