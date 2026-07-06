@@ -163,6 +163,27 @@ test("a new server takes over the fixed port from a lingering one", async () => 
 	}
 });
 
+test("a /cancel carrying a previous run's id is ignored (stale-tab guard)", async () => {
+	const server = startServer("init.json");
+	try {
+		const url = await server.ready;
+		await request(withPath(url, "/cancel?r=deadbeefdeadbeef"), {
+			method: "POST",
+			body: "",
+		});
+		await sleep(400);
+		assert.equal(server.exited, false, "stale beacon must not cancel the live round");
+		const forged = await request(withPath(url, "/submit?r=deadbeefdeadbeef"), {
+			method: "POST",
+			body: '{"type":"evil"}',
+		});
+		assert.equal(forged.status, 409);
+		assert.equal(server.stdout, "");
+	} finally {
+		await close(server);
+	}
+});
+
 test("cancel grace treats reload as non-cancel, while ?now=1 cancels immediately", async () => {
 	const graceful = startServer("init.json");
 	try {

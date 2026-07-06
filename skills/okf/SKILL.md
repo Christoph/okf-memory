@@ -11,26 +11,24 @@ Open the okf-memory project memory plane. This is a browser dashboard for memory
 
 ## Preconditions
 
-1. The dashboard server must exist at `./server.mjs` relative to this skill directory. If not, stop with: `Install the full okf-memory skill folder; /okf needs okf/server.mjs for the dashboard.`
+1. The dashboard server and gatherer must exist at `./server.mjs` and `./gather.mjs` relative to this skill directory. If not, stop with: `Install the full okf-memory skill folder; /okf needs okf/server.mjs and okf/gather.mjs for the dashboard.`
 2. Do not mutate `memory/` while the browser dashboard is open. The dashboard only returns an action request; the agent performs file/code changes after the server exits.
 
-## Load memory state
+## Open the dashboard
 
-Detect whether `memory/index.md` exists.
+Gathering state is mechanical and fully scripted — do **not** read bundle files or run git yourself to assemble the payload. From anywhere inside the project:
 
-If it exists:
+```bash
+node <skill-dir>/gather.mjs | node <skill-dir>/server.mjs
+```
 
-- Read `memory/index.md` frontmatter for `okf_version` and `last_memorized_commit`.
-- Count concept files under `memory/`, excluding reserved `index.md` and `log.md`.
-- Count memories with stale anchors when cheap to do so: collect frontmatter `files:` and compare to `git ls-files`.
-- Count unmemorized commits with `git log --oneline <last_memorized_commit>..HEAD` when `last_memorized_commit` is present and valid.
-- Count concepts per area for `architecture`, `decisions`, `patterns`, `pitfalls`, and `setup`.
+`gather.mjs` resolves the project root (`git rev-parse --show-toplevel` from the cwd; pass an explicit root as its first argument only when the cwd is outside the target repo) and prints the full payload: memory state (`okf_version`, `last_memorized_commit`, concept count, stale file anchors, unmemorized commit count), the five knowledge areas with counts, and every plan/chunk concept under `memory/plans/`. A missing bundle yields `memory.initialized: false` with the standard areas.
 
-If it does not exist, set `memory.initialized: false`, counts to zero or `?`, and still show the standard areas.
+Read exactly one JSON line from the server's stdout and react to it (see below).
 
-## Load OKF plans and chunks
+## Plan and chunk file format
 
-Plans and chunks are normal OKF concepts so they stay clear and human-readable.
+Plans and chunks are normal OKF concepts so they stay clear and human-readable. `gather.mjs` reads them; you write them when handling `create-plan` / `create-chunk` actions.
 
 Recommended structure:
 
@@ -72,27 +70,7 @@ files:
 ---
 ```
 
-Load every non-reserved `.md` file under `memory/plans/`:
-
-- `type: Plan` files become `plans[]`.
-- `type: Work Chunk` or `type: Chunk` files become `chunks[]`.
-- Derive `id` from path minus `.md`, for example `plans/dashboard-ui/render-dashboard`.
-- Derive a chunk's `planId` from frontmatter `plan:` if present, otherwise from its parent plan path.
-- Read `title`, `description`, `status`, `depends_on`, `files`, and body.
-
-If there are no plan files yet, pass empty arrays; the dashboard can still request `create-plan`.
-
-## Invoke dashboard
-
-Send a JSON payload to the local dashboard server:
-
-```bash
-node ./server.mjs <<'OKF_PAYLOAD'
-{ "project": "...", "bundlePath": "memory/", "memory": {}, "areas": [], "plans": [], "chunks": [] }
-OKF_PAYLOAD
-```
-
-Read exactly one JSON line from stdout.
+(`gather.mjs` maps these automatically: `type: Plan` files become `plans[]`; `type: Work Chunk` / `type: Chunk` files become `chunks[]`; a concept's `id` is its path minus `.md`; a chunk's `planId` comes from frontmatter `plan:` or its parent plan path. No plan files yet is fine — the dashboard still offers `create-plan`.)
 
 ## React to dashboard actions
 

@@ -279,14 +279,22 @@ The server should:
 1. Bind to `127.0.0.1` locally; in remote sessions (SSH, container/microVM
    sandbox) bind `0.0.0.0` so a forwarded port can reach it (see
    "Remote sessions" below).
-2. Generate a per-run random token and require it on every request.
-3. Check the `Host` header to prevent DNS rebinding.
-4. Retry or use an ephemeral port if the preferred port is busy.
-5. Print one JSON line on submit, cancel, and timeout.
-6. Escape embedded JSON so values containing `</script>` cannot break out of
+2. Check the `Host` header locally to prevent DNS rebinding. (A per-run URL
+   token is optional hardening; iterator/okf-memory dropped theirs as
+   dev-only friction — with the host-side publish kept on loopback the
+   exposure matches any local dev server.)
+3. Keep the default port **fixed** and take it over from a lingering instance
+   of yourself (see "Single-instance takeover" below). Walk to another port
+   only when a *foreign* process owns it, and always print the real URL.
+4. Print one JSON line on submit, cancel, timeout, **and termination signals**
+   (SIGTERM/SIGINT/SIGHUP → `{ "type": "cancel" }`), so the skill's
+   one-JSON-line contract survives interrupts and takeover, and the port is
+   always freed.
+5. Escape embedded JSON so values containing `</script>` cannot break out of
    inline scripts.
-7. Use env vars for knobs, prefixed with your app name (`<APP>_NO_OPEN`,
-   `<APP>_PORT`, `<APP>_REMOTE`, `<APP>_BIND_HOST`, etc.).
+6. Use env vars for knobs, prefixed with your app name (`<APP>_NO_OPEN`,
+   `<APP>_PORT`, `<APP>_REMOTE`, `<APP>_BIND_HOST`, `<APP>_REGISTRY`,
+   `<APP>_NO_TAKEOVER`, etc.).
 
 Minimal server skeleton:
 
@@ -294,7 +302,6 @@ Minimal server skeleton:
 #!/usr/bin/env node
 import http from "node:http";
 import { exec } from "node:child_process";
-import { randomBytes } from "node:crypto";
 
 function readStdin() {
   return new Promise((resolve) => {
@@ -314,7 +321,6 @@ function embed(value) {
 }
 
 const payload = JSON.parse((await readStdin()) || "{}");
-const token = randomBytes(16).toString("hex");
 const hostRe = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/;
 let done = false;
 
@@ -332,9 +338,8 @@ const html = `<!doctype html>
   <button id="ok">Approve</button>
   <script>
     const D = ${embed(payload)};
-    const token = new URL(location.href).searchParams.get("t");
     document.getElementById("ok").onclick = async () => {
-      await fetch(`/submit?t=${token}`, {
+      await fetch("/submit", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ type: "approved", data: D }),
@@ -346,7 +351,7 @@ const html = `<!doctype html>
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://127.0.0.1");
-  if (!hostRe.test(String(req.headers.host || "")) || url.searchParams.get("t") !== token) {
+  if (!hostRe.test(String(req.headers.host || ""))) {
     res.writeHead(403).end("Forbidden");
     return;
   }
@@ -372,7 +377,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(0, "127.0.0.1", () => {
   const { port } = server.address();
-  const url = `http://127.0.0.1:${port}/?t=${token}`;
+  const url = `http://127.0.0.1:${port}/`;
   if (!process.env.<APP>_NO_OPEN) {
     const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start \"\"" : "xdg-open";
     exec(`${opener} "${url}"`);
@@ -380,13 +385,96 @@ server.listen(0, "127.0.0.1", () => {
   process.stderr.write(`<APP>: listening on ${url}\n`);
 });
 
+for (const sig of ["SIGTERM", "SIGINT", "SIGHUP"]) {
+  process.on(sig, () => finish({ type: "cancel" }));
+}
 setTimeout(() => finish({ type: "timeout" }), 7_200_000).unref();
 ```
 
-For multi-step browser UIs, keep shared helpers in `lib/` while developing,
-then copy them into each skill folder before publishing. Skill folders should be
-self-contained so they still work when users copy or filter individual skills.
-Add a test that byte-compares bundled copies against `lib/` to prevent drift.
+(The skeleton omits the takeover/registry logic for brevity — see the next
+section and the production implementations in iterator's and okf-memory's
+`lib/server.mjs`.)
+
+For multi-step browser UIs there are two layouts:
+
+- **Self-contained skills**: keep shared helpers in `lib/` while developing,
+  copy them into each skill folder before publishing, and add a test that
+  byte-compares bundled copies against `lib/` to prevent drift. Each skill
+  folder then works when copied alone.
+- **UI as control plane** (what iterator uses): ONE hub skill owns the server
+  and all step views (`lib/views/<step>.mjs`, view picked by a `step` field in
+  the stdin payload); the other skills are logic-only and invoke the hub's
+  server as `<skill-dir>/../<hub>/server.mjs`. One port, one tab, no
+  per-skill server drift — at the cost that the skill folders must be
+  installed together. Prefer this when the skills form one flow with a shared
+  dashboard; combined with the single-instance takeover below it makes the
+  UI feel like one continuously-updating page.
+
+### Ship the payload gathering as code, not prompt instructions
+
+If the SKILL.md describes *what* state to collect (read these files, count
+those, run this git query) but ships no tool to collect it, the agent
+re-improvises a collector script on every invocation — in the field this
+meant ~100 lines of ad-hoc Python and 79 seconds per dashboard open, with
+counts that could differ between runs and zero test coverage. Anything
+mechanical belongs in a shipped `gather.mjs` that prints the payload JSON, so
+the SKILL.md's whole gathering section collapses to:
+
+```sh
+node <skill-dir>/gather.mjs | node <skill-dir>/server.mjs
+```
+
+Resolve the project root inside the script (`git rev-parse --show-toplevel`
+from the cwd, optional explicit-path argument) — do not assume the skill's
+install directory has anything to do with the user's repo. Export the
+functions (`gather()`, `frontmatter()`, …) so they are unit-testable against
+a fixture repo. The split to aim for: **mechanical logic in scripts, semantic
+logic in the model** — the agent only reacts to the user's answer and writes
+files.
+
+### Stale-tab guard: a per-run id on /cancel and /submit
+
+A consequence of one fixed shared port: a tab left over from an EARLIER round
+(abandoned mid-round, superseded by takeover) fires its `pagehide` `/cancel`
+beacon at whatever server *currently* owns the port when it is finally
+closed — silently cancelling a live round the moment the user tidies their
+tabs (this presented as "the dashboard cancels as soon as I start typing").
+Fix: embed a per-run id in each page (`const __RUN = …`), echo it as `?r=` on
+`/submit` and `/cancel`, and have the server ignore mismatches (log to
+stderr; 409 for `/submit`). Accept requests *without* an id so curl, scripts,
+and tests keep working — the id is round-matching, not auth.
+
+### Single-instance takeover: one UI on one fixed port
+
+A one-shot server can be orphaned — the agent session is interrupted, the
+tab is never answered, a background invocation is forgotten — and it then
+holds the port until its timeout (hours). The naive fallback, "walk up to the
+next free port", is exactly wrong in sandboxes: the host forwards ONE fixed
+port, so a server that drifts to `<port>+1` is unreachable
+(`ERR_CONNECTION_REFUSED` on the host). Treat the UI as a **singleton on a
+fixed port**:
+
+1. After `listen()`, write `{ pid, port }` to a per-user registry file:
+   `join(tmpdir(), "<app>-ui-" + userInfo().uid + ".json")` (override:
+   `<APP>_REGISTRY`), mode `0600`. Remove your own entry on exit.
+2. On startup, before binding: read the registry; if it names another pid,
+   verify the holder really is a lingering instance of *your* app by fetching
+   a tokenless, read-only status endpoint on the recorded port
+   (`GET /__<app>/status` → `{ app, step, pid }`). Pids get reused — never
+   kill on the registry entry alone.
+3. If app and pid match: SIGTERM it, poll `process.kill(pid, 0)` up to ~2 s,
+   SIGKILL as a last resort, delete the registry file, then bind the fixed
+   port. The evicted server's signal handler prints `{ "type": "cancel" }`,
+   so its (dead or abandoned) skill invocation still gets a valid JSON line.
+4. `<APP>_NO_TAKEOVER=1` opts out (tests, deliberate side-by-side runs).
+
+Test-suite gotcha: `node --test` runs test *files* in parallel. If every
+spawned server shares the real registry they take each other over mid-test —
+give each spawn a unique `<APP>_REGISTRY` (e.g. `tmpdir()/<app>-test-<uuid>`)
+and share one only in the dedicated takeover test. Worth testing: status
+endpoint answers without auth; SIGTERM → `{"type":"cancel"}` + exit 0; a
+second server evicts the first AND lands on the same port; `<APP>_NO_TAKEOVER`
+walks instead.
 
 ### Remote sessions: reaching the UI from the host
 
@@ -418,7 +506,7 @@ Behavior by mode:
 | | local | remote |
 | --- | --- | --- |
 | bind host | `127.0.0.1` | `0.0.0.0` (override: `<APP>_BIND_HOST`) |
-| port | fixed default, walk up if busy (`<APP>_PORT`) | same — a fixed port is what makes forwarding practical |
+| port | fixed default (`<APP>_PORT`); single-instance takeover keeps it stable; walk up only past foreign processes | same — the takeover is what keeps a `port:port` forward valid across runs |
 | browser | auto-open via `open`/`xdg-open`/`BROWSER` | skip; print `http://127.0.0.1:<port>/` to stderr for the host |
 
 Always print the URL with `127.0.0.1` as the display host, never `0.0.0.0` —
@@ -442,22 +530,49 @@ Per environment:
 - **Docker sandboxes (`sbx`)**: publish with the explicit `host:container`
   form — `sbx ports <sandbox> --publish 8888:8888`. A bare `--publish 8888`
   maps to a *random* host port (and adds a new one on every call), so the
-  printed URL will not match. Publishing is per sandbox; do it once per
-  sandbox (it persists across restarts of that sandbox).
+  printed URL will not match. **Two hard-won rules** (`sbx ports --help`:
+  "publish … ports for a *running* sandbox"):
+  1. `sbx ports` only takes effect on a **running** sandbox. Publishing right
+     after `sbx create` (state: created, not running) or against a stopped
+     sandbox silently leaves you with zero forwards.
+  2. Publishes do **not** survive the sandbox being stopped — re-publish on
+     every start, *after* the sandbox is up. `sbx exec <sandbox> true` is the
+     documented way to boot a stopped sandbox without attaching; publish
+     after it, then attach with `sbx run --name <sandbox>` (the bare
+     positional form puts the sandbox name where the CLI expects an *agent*).
+     See the `pisbx` startup function in pi-docker-sandbox-setup's README for
+     the full boot → publish → verify → attach sequence.
 - **VS Code devcontainers / Codespaces**: ports are forwarded automatically;
   check the Ports tab for the host-side address.
 - **Plain SSH**: forward manually, e.g. `ssh -L 8888:localhost:8888 host` or
   a `LocalForward` entry in `~/.ssh/config`.
 
-Then open the printed URL (`http://127.0.0.1:8888/`) in the host browser. If
-the default port was busy inside the sandbox the server walks up (8889, …)
-and the stderr line shows the real port — it must match the published one,
-so pin `<APP>_PORT` if collisions are common.
+Then open the printed URL (`http://127.0.0.1:8888/`) in the host browser.
+With single-instance takeover the server stays on the fixed port across runs;
+the stderr line always shows the real port and must match the published one.
+
+Troubleshooting `ERR_CONNECTION_REFUSED` on the host — walk the chain from
+the host inward:
+
+1. `lsof -nP -iTCP:8888 -sTCP:LISTEN` **on the host**. A live publish shows a
+   host-side proxy listening even when the app inside is down; no listener
+   means the browser is refused before the sandbox is involved — the publish
+   is missing (see the running-sandbox rules above).
+2. `sbx ls` — the PORTS column is the truth. Empty column = no forwards for
+   that sandbox; fix with `sbx ports <sandbox> --publish 8888:8888` while it
+   runs.
+3. Only then look inside: is a server actually listening right now? These
+   are one-shot servers — they only run while a skill is waiting for an
+   answer, so a URL from a finished round trip is *expected* to refuse.
+   Re-run the skill and use the freshly printed URL; check the stderr
+   "listening on" line for the port.
 
 Security: binding `0.0.0.0` exposes the UI to whatever network the sandbox
 is attached to. Keep the host-side publish on loopback (`127.0.0.1:8888`,
-not `0.0.0.0:8888`), and keep token/Host checks if the sandbox shares a
-network with other workloads.
+not `0.0.0.0:8888`), keep the `Host` check, and remember that without a
+token anyone who can reach the published port can answer as the user — add
+per-run token hardening back if the sandbox shares a network with other
+workloads.
 
 ---
 
@@ -482,8 +597,20 @@ Recommended tests:
 4. Browser servers accept stdin payloads, serve `GET /`, echo `POST /submit`,
    and exit 0.
 5. Payload strings containing `</script>` remain data, not executable markup.
-6. Missing/wrong token and non-local `Host` requests return 403.
-7. Runtime dependencies are in `dependencies`; pi core packages are peers.
+6. Non-local `Host` requests return 403 locally (relaxed when bound beyond
+   loopback).
+7. `GET /__<app>/status` answers without auth; SIGTERM prints
+   `{"type":"cancel"}` and exits 0; a second server evicts a lingering one
+   and binds the SAME fixed port; `<APP>_NO_TAKEOVER=1` port-walks instead.
+   Give every spawned test server a unique `<APP>_REGISTRY` — `node --test`
+   runs files in parallel and shared registries make servers evict each
+   other mid-test.
+8. A `/cancel` or `/submit` carrying a mismatched run id (`?r=`) is ignored
+   (409 for `/submit`) and the flow keeps running; the live page's own id is
+   accepted.
+9. `gather.mjs` builds the correct payload from a fixture repo (and an empty
+   repo yields the uninitialized shape).
+10. Runtime dependencies are in `dependencies`; pi core packages are peers.
 
 ---
 
