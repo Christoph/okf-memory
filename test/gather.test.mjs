@@ -104,6 +104,21 @@ test("gather builds the dashboard payload from bundle + git state", () => {
 		assert.ok(p.memory.staleCount >= 1);
 		assert.equal(p.areas.length, 5);
 		assert.equal(p.areas.find((a) => a.id === "patterns").count, 1);
+		assert.equal(p.memories.length, 4);
+		assert.deepEqual(
+			p.memories.find((m) => m.id === "chunks/draft-slug"),
+			{
+				id: "chunks/draft-slug",
+				slug: "draft-slug",
+				path: "chunks/draft-slug.md",
+				area: "chunks",
+				type: "Chunk",
+				title: "Draft slug",
+				description: "Draft chunk visible from disk.",
+				status: "draft",
+				files: ["skills/okf/gather.mjs"],
+			},
+		);
 
 		assert.equal(p.plans.length, 1);
 		assert.equal(p.plans[0].id, "plans/dashboard-ui");

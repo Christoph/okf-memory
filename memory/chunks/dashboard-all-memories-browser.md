@@ -2,13 +2,14 @@
 type: Chunk
 title: Dashboard all-memories browser
 description: Update the dashboard UI to show every memory concept, not just area counts and plan/chunk cards, with stable slug identifiers and per-memory actions.
-status: pending
+status: done
 size: medium
 lines_estimate: 180
 depends_on: [slugged-draft-chunk-model, extension-memory-contract]
 files: ["skills/okf/gather.mjs", "skills/okf/server.mjs", "test/gather.test.mjs", "test/dashboard.test.mjs", "test/fixtures/dashboard.json"]
-timestamp: "2026-07-06T14:36:18.550Z"
+timestamp: "2026-07-06T15:11:48.148Z"
 tags: []
+done: 2026-07-06
 ---
 
 # Implementation notes

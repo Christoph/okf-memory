@@ -144,12 +144,27 @@ export function gather(startDir) {
 		count: mdFilesUnder(join(mem, id)).length,
 	}));
 
+	const memories = [];
 	const plans = [];
 	const chunks = [];
 	for (const p of conceptFiles) {
 		const { fm, body } = frontmatter(readFileSync(p, "utf8"));
 		const type = String(fm.type || "").toLowerCase();
 		const rel = relative(mem, p).replace(/\.md$/, "").split("\\").join("/");
+		const slug = rel.startsWith("chunks/")
+			? chunkIdentity(rel)
+			: rel.split("/").pop();
+		memories.push({
+			id: rel,
+			slug,
+			path: `${rel}.md`,
+			area: rel.includes("/") ? rel.split("/")[0] : "root",
+			type: fm.type || "",
+			title: fm.title || rel,
+			description: fm.description || "",
+			status: fm.status || "",
+			files: listValue(fm.files),
+		});
 		if (type === "plan") {
 			plans.push({
 				id: rel,
@@ -198,6 +213,7 @@ export function gather(startDir) {
 			unmemorizedCommitCount: unmemorized,
 		},
 		areas,
+		memories,
 		plans,
 		chunks,
 	};

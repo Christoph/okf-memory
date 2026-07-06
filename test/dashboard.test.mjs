@@ -15,6 +15,10 @@ test("dashboard renders memory state, plans, chunks, and action callbacks", asyn
 		assert.equal(page.status, 200);
 		assert.match(page.text, /okf-memory — project memory plane/);
 		assert.match(page.text, /Memory status/);
+		assert.match(page.text, /All memories/);
+		assert.match(page.text, /Safe browser rendering/);
+		assert.match(page.text, /draft-dashboard-card/);
+		assert.match(page.text, /chunks\/draft-dashboard-card\.md/);
 		assert.match(page.text, /Dashboard UI/);
 		assert.match(page.text, /Render dashboard/);
 		assert.match(page.text, /small/);
