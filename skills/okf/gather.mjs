@@ -219,9 +219,67 @@ export function gather(startDir) {
 	};
 }
 
+/**
+ * The commit range /okf-memorize must study — everything mechanical about
+ * "what happened since last_memorized_commit" (pointer validation, the
+ * merge-base fallback after rebases, the commit list) computed in code:
+ *
+ *   node <skill-dir>/gather.mjs [project-root] --step range
+ */
+export function gatherRange(startDir) {
+	const cwd = startDir || process.cwd();
+	const root = git(["rev-parse", "--show-toplevel"], cwd) || cwd;
+	const idx = join(root, "memory", "index.md");
+	const base = existsSync(idx)
+		? (frontmatter(readFileSync(idx, "utf8")).fm.last_memorized_commit ?? null)
+		: null;
+	const head = git(["rev-parse", "HEAD"], root) || null;
+	const baseValid =
+		!!base && git(["rev-parse", "--verify", "--quiet", `${base}^{commit}`], root) !== "";
+	// After a rebase/force-push the recorded sha may be gone; merge-base
+	// recovers the closest shared ancestor when the object still exists.
+	const mergeBaseFallback =
+		base && !baseValid ? git(["merge-base", "HEAD", base], root) || null : null;
+	const effectiveBase = baseValid ? base : mergeBaseFallback;
+	const commits =
+		effectiveBase && head
+			? git(["log", "--format=%H%x09%s", `${effectiveBase}..HEAD`], root)
+					.split("\n")
+					.filter(Boolean)
+					.map((l) => {
+						const [sha, ...s] = l.split("\t");
+						return { sha, subject: s.join("\t") };
+					})
+			: [];
+	return {
+		step: "range",
+		initialized: existsSync(idx),
+		head,
+		lastMemorizedCommit: base,
+		baseValid,
+		mergeBaseFallback,
+		effectiveBase,
+		commitCount: commits.length,
+		commits: commits.slice(0, 100),
+		nothingToMemorize: !!effectiveBase && commits.length === 0,
+	};
+}
+
 if (
 	process.argv[1] &&
 	import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
-	process.stdout.write(JSON.stringify(gather(process.argv[2])) + "\n");
+	const args = process.argv.slice(2);
+	let step = "dashboard";
+	let rootArg = null;
+	for (let i = 0; i < args.length; i++) {
+		if (args[i] === "--step") step = args[++i];
+		else rootArg = args[i];
+	}
+	const steps = { dashboard: () => gather(rootArg), range: () => gatherRange(rootArg) };
+	if (!steps[step]) {
+		process.stderr.write(`okf gather: unknown step '${step}' (dashboard|range)\n`);
+		process.exit(1);
+	}
+	process.stdout.write(JSON.stringify(steps[step]()) + "\n");
 }

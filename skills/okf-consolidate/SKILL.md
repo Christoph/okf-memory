@@ -37,37 +37,35 @@ Use `mode: "consolidate"`.
 - Include all other memories as `action: "keep"` with `existingBody` so the user can still delete them.
 - Include `existingBody` for every `update`, `delete`, and `keep` card.
 
-Invoke the shared review server:
+Invoke the shared review server with `apply: true` so an approval is applied
+by the deterministic writer (`../okf-init/write.mjs`) before the result
+reaches you — never hand-author memory files, indexes, or the log:
 
 ```bash
 node ../okf-init/server.mjs <<'OKF_PAYLOAD'
-{ "mode": "consolidate", "project": "...", "bundlePath": "memory/", "round": 1, "areas": [], "memories": [] }
+{ "mode": "consolidate", "apply": true, "project": "<git root>", "bundlePath": "memory/", "round": 1, "areas": [], "memories": [] }
 OKF_PAYLOAD
 ```
+
+Do **not** include `headCommit` — consolidation never moves
+`last_memorized_commit`.
 
 ## React
 
 - `review-feedback`: revise commented drafts plus the general note, increment `round`, and invoke the server again. Write nothing mid-loop.
 - `cancel` / `timeout`: write nothing and explicitly report that consolidation was cancelled/timed out.
-- `review-approved`: apply verdicts.
-
-Verdicts:
-
-- `accept`: write the proposed concept body/frontmatter.
-- `reject`: discard the proposal and leave disk unchanged.
-- `keep`: leave the existing concept unchanged.
-- `delete`: remove the existing concept file.
+- `review-approved`: the verdicts are **already applied** — the result line
+  carries `applied` with the writer's outcome (`written`, `deleted`, `kept`,
+  `rejected`, `validation`). Verdict semantics, for reference: `accept` writes
+  the proposed concept, `reject` discards the proposal, `keep` leaves the
+  existing concept, `delete` removes it. The writer also regenerated the
+  affected area indexes and `memory/index.md` links (preserving all foreign
+  content), appended newest-first `memory/log.md` entries, and ran the
+  bundle validator.
 
 ## Finish
 
-Regenerate affected area indexes and `memory/index.md` links. Do **not** change `last_memorized_commit`.
-
-Append newest-first `memory/log.md` entries under today's ISO date using bold leads such as `**Update**` and `**Deletion**`.
-
-Run:
-
-```bash
-node scripts/validate.mjs memory/
-```
-
-Report kept/updated/deleted/rejected counts and any stale memories that remain.
+Read `applied` from the result. If `applied.ok` is false (or
+`applied.validation.ok` is false), show the error and fix it through another
+review round — do not patch files by hand. Otherwise report
+kept/updated/deleted/rejected counts and any stale memories that remain.

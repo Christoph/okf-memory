@@ -2,13 +2,18 @@
 type: Chunk
 title: Manifest dependency discovery
 description: Detect and parse real project dependency manifests so plan gathering can supply dependency chips from package.json, Cargo.toml, pyproject.toml, go.mod, or an empty list when none are declared.
-status: pending
+status: done
 size: medium
 lines_estimate: 190
 depends_on: []
-files: ["/home/agent/.pi/agent/git/github.com/Christoph/iterator/skills/iterator/gather.mjs", "/home/agent/.pi/agent/git/github.com/Christoph/iterator/test/gather.test.mjs"]
-timestamp: "2026-07-06T17:50:14.361Z"
+files: ["skills/iterator/gather.mjs", "test/gather.test.mjs", "test/steps.test.mjs"]
+timestamp: "2026-07-06T18:00:38.116Z"
 tags: []
+done: 2026-07-06
+commits:
+  - sha: 4532fbe2fa3158956e84487ba8454a9fbd71f263
+    kind: implement
+    date: 2026-07-06
 ---
 
 # Implementation notes
@@ -21,29 +26,13 @@ Add small manifest-discovery helpers near gatherPlan in the iterator gather scri
 export function gatherPlan(startDir) {
   const b = loadBundle(startDir);
   const s = b.plan?.sections || {};
-  const dependencies = (s['Dependencies'] || '').split('\n')
-    .map(l => l.match(/^[*-]\s+(.*)$/))
-    .filter(Boolean)
-    .map(m => m[1].replaceAll('`', '').trim());
+  const dependencies = manifestDependencies(b.root);
   return {
     step: 'plan',
     branch: b.branch,
-    title: b.plan?.fm.title || '',
-    exists: !!b.plan,
-    status: b.plan?.fm.status || null,
-    // ...
     dependencies,
+    // ...
   };
-}
-```
-
-```js
-function makeFixture() {
-  const root = mkdtempSync(join(tmpdir(), 'iterator-gather-'));
-  git(root, 'init', '-q');
-  mkdirSync(join(root, 'memory', 'chunks'), { recursive: true });
-  // tests can add package.json/Cargo.toml fixtures under root
-  return root;
 }
 ```
 

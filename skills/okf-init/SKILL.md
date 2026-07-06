@@ -38,13 +38,13 @@ Draft about 3–8 memories total per useful area. Every memory must tell an agen
 
 ## Review
 
-Send a JSON payload to the shared review server with `mode: "init"` and all memories marked `action: "create"`.
+Send a JSON payload to the shared review server with `mode: "init"`, all memories marked `action: "create"`, and `apply: true` so an approval is applied by the sibling deterministic writer (`write.mjs`) before the result reaches you — never hand-author memory files, indexes, or the log. Set `headCommit` to `git rev-parse HEAD` so the writer seeds `last_memorized_commit`.
 
 Claude Code plugin path:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/skills/okf-init/server.mjs" <<'OKF_PAYLOAD'
-{ "mode": "init", "project": "...", "bundlePath": "memory/", "round": 1, "areas": [], "memories": [] }
+{ "mode": "init", "apply": true, "project": "<git root>", "bundlePath": "memory/", "round": 1, "headCommit": "...", "areas": [], "memories": [] }
 OKF_PAYLOAD
 ```
 
@@ -52,7 +52,7 @@ Portable skill path when running from this skill directory:
 
 ```bash
 node ./server.mjs <<'OKF_PAYLOAD'
-{ "mode": "init", "project": "...", "bundlePath": "memory/", "round": 1, "areas": [], "memories": [] }
+{ "mode": "init", "apply": true, "project": "<git root>", "bundlePath": "memory/", "round": 1, "headCommit": "...", "areas": [], "memories": [] }
 OKF_PAYLOAD
 ```
 
@@ -62,25 +62,14 @@ Read exactly one JSON line from stdout.
 
 - `review-feedback`: revise the commented drafts plus the general note, increment `round`, and invoke the server again. Write nothing mid-loop.
 - `cancel` / `timeout`: write nothing and tell the user explicitly that initialization was cancelled/timed out.
-- `review-approved`: write accepted concepts and skip rejected ones.
+- `review-approved`: the accepted concepts are **already written** — the result line carries `applied` with the writer's outcome (`written`, `rejected`, `advancedTo`, `validation`): concept files, regenerated area indexes, the root `memory/index.md` (with `okf_version` and `last_memorized_commit`), and newest-first `memory/log.md` entries all exist on disk, validated. If `applied.ok` or `applied.validation.ok` is false, show the error and fix it through another review round — do not patch files by hand.
 
-## Write bundle on approval
+## After approval: the extension contract
 
-Create:
-
-```text
-memory/
-  index.md
-  log.md
-  EXTENSIONS.md
-  architecture/index.md
-  decisions/index.md
-  patterns/index.md
-  pitfalls/index.md
-  setup/index.md
-```
-
-Also create `memory/EXTENSIONS.md` as the extension-facing memory contract. It is
+The only file you author by hand (its content is project-specific prose):
+create `memory/EXTENSIONS.md` as the extension-facing memory contract and add
+`* [Extension contract](EXTENSIONS.md) - How extensions should read and update this memory bundle.`
+to the root index's links. It is
 an ordinary OKF concept with frontmatter similar to:
 
 ```yaml
@@ -112,7 +101,9 @@ Its body must explain, in project-specific but concise terms:
 Link this contract from the root `memory/index.md` so other extensions can
 self-discover it without package-specific knowledge.
 
-For every accepted concept, write `<area>/<slug>.md` with frontmatter:
+## Card schema (what the writer emits from your drafts)
+
+Draft cards carry `id` (`<area>/<slug>`), `type`, `title`, `description`, optional `tags`/`files`, and `body`; the writer turns each accepted card into `<area>/<slug>.md`:
 
 ```yaml
 ---
@@ -127,23 +118,8 @@ files:
 ---
 ```
 
-Use type values `Architecture`, `Decision`, `Pattern`, `Pitfall`, or `Setup`. Decision memories also include `status: accepted` or `status: superseded` and `date:`.
+Use type values `Architecture`, `Decision`, `Pattern`, `Pitfall`, or `Setup`. Decision memories also include `status: accepted` or `status: superseded` and `date:`. Use bundle-absolute cross-links such as `/patterns/error-handling.md` in bodies.
 
-Root `memory/index.md` frontmatter:
+## Finish
 
-```yaml
----
-okf_version: "0.1"
-last_memorized_commit: <git rev-parse HEAD>
----
-```
-
-Regenerate area indexes and root index with links, including `* [Extension contract](EXTENSIONS.md) - How extensions should read and update this memory bundle.`. Use bundle-absolute cross-links such as `/patterns/error-handling.md`. Append a newest-first `memory/log.md` entry headed by today's ISO date with bold-lead `**Initialization**` bullets.
-
-Run:
-
-```bash
-node scripts/validate.mjs memory/
-```
-
-Report created/accepted/rejected counts, mention that `memory/EXTENSIONS.md` was created for other extensions, and remind the user to paste the README project-memory snippet into `CLAUDE.md` or `AGENTS.md`.
+Report created/accepted/rejected counts from `applied`, mention that `memory/EXTENSIONS.md` was created for other extensions, and remind the user to paste the README project-memory snippet into `CLAUDE.md` or `AGENTS.md`.

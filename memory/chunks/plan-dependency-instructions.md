@@ -2,13 +2,18 @@
 type: Chunk
 title: Plan dependency instructions
 description: Update iterator planning instructions and examples so agents use only gathered manifest dependencies when drafting the plan payload.
-status: pending
+status: done
 size: small
 lines_estimate: 80
 depends_on: [manifest-dependency-discovery]
-files: ["/home/agent/.pi/agent/git/github.com/Christoph/iterator/skills/iterator-plan/SKILL.md", "/home/agent/.pi/agent/git/github.com/Christoph/iterator/package.json", "/home/agent/.pi/agent/git/github.com/Christoph/iterator/README.md"]
-timestamp: "2026-07-06T17:50:14.361Z"
+files: ["skills/iterator-plan/SKILL.md", "package.json", "README.md"]
+timestamp: "2026-07-06T18:11:04.971Z"
 tags: []
+done: 2026-07-06
+commits:
+  - sha: f719e661b46e9f12146c905c0971a538d362bcbf
+    kind: implement
+    date: 2026-07-06
 ---
 
 # Implementation notes

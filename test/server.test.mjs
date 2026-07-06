@@ -222,3 +222,71 @@ test("cancel grace treats reload as non-cancel, while ?now=1 cancels immediately
 		await close(immediate);
 	}
 });
+
+test("apply:true payloads get review-approved verdicts applied by the writer before printing", async () => {
+	const { mkdtempSync, existsSync: exists, rmSync: rm, readFileSync: readF } =
+		await import("node:fs");
+	const repo = mkdtempSync(join(tmpdir(), `okf-apply-${randomUUID()}`));
+	const card = {
+		id: "patterns/one-liner",
+		area: "patterns",
+		action: "create",
+		type: "Pattern",
+		title: "One liner",
+		description: "Servers print one JSON line.",
+		body: "# Pattern\n\nOne line out.",
+	};
+	const server = startServer({
+		mode: "memorize",
+		apply: true,
+		project: repo,
+		bundlePath: "memory/",
+		round: 1,
+		areas: [],
+		memories: [card],
+	});
+	try {
+		const url = await server.ready;
+		await request(withPath(url, "/submit"), {
+			method: "POST",
+			body: JSON.stringify({
+				type: "review-approved",
+				mode: "memorize",
+				decisions: [{ id: "patterns/one-liner", verdict: "accept" }],
+			}),
+		});
+		await server.waitForExit();
+		const out = JSON.parse(server.stdout.trim());
+		assert.equal(out.type, "review-approved");
+		assert.equal(out.applied.ok, true, JSON.stringify(out.applied));
+		assert.deepEqual(out.applied.written, ["patterns/one-liner"]);
+		assert.ok(exists(join(repo, "memory", "patterns", "one-liner.md")));
+		assert.match(
+			readF(join(repo, "memory", "patterns", "index.md"), "utf8"),
+			/\[One liner\]/,
+		);
+	} finally {
+		await close(server);
+		rm(repo, { recursive: true, force: true });
+	}
+});
+
+test("without apply:true a review-approved submit passes through untouched", async () => {
+	const server = startServer("init.json");
+	try {
+		const url = await server.ready;
+		const payload = {
+			type: "review-approved",
+			mode: "init",
+			decisions: [{ id: "patterns/error-handling", verdict: "accept" }],
+		};
+		await request(withPath(url, "/submit"), {
+			method: "POST",
+			body: JSON.stringify(payload),
+		});
+		await server.waitForExit();
+		assert.equal(server.stdout.trim(), JSON.stringify(payload));
+	} finally {
+		await close(server);
+	}
+});

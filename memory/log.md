@@ -1,6 +1,10 @@
 # Memory Update Log
 
 ## 2026-07-06
+* **Implementation**: Committed chunk(plan-dependency-instructions) on branch iterator/manifest-dependency-discovery.
+* **Update**: 1 chunk(s) written.
+* **Implementation**: Committed chunk(manifest-dependency-discovery) on branch iterator/manifest-dependency-discovery.
+* **Update**: 1 chunk(s) written.
 * **Update**: Applied 2 chunk adjustment(s).
 * **Update**: 2 chunk(s) written.
 * **Update**: Plan "Manifest-backed plan dependencies" approved on branch iterator/preserve-root-memory-index.

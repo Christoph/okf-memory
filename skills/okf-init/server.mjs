@@ -25,6 +25,8 @@
  * change nothing) | keep (leave the existing file untouched) | delete (remove
  * the existing concept file).
  */
+import { execFile } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { readPayload, serve } from "./lib/server.mjs";
 import { renderPage, escHtml } from "./lib/ui.mjs";
 
@@ -321,4 +323,45 @@ const html = renderPage({
 	primaryChanged: "Send review",
 });
 
-serve({ step: mode, html });
+/**
+ * When the payload opts in (`apply: true`), a review-approved answer is
+ * applied by the sibling deterministic writer before the result reaches the
+ * agent — the printed line gains `applied` (the writer's result, or
+ * { ok:false, error } on failure). Feedback/cancel/timeout pass through
+ * untouched; so does everything when `apply` is absent.
+ */
+const WRITE = fileURLToPath(new URL("./write.mjs", import.meta.url));
+
+async function onSubmit(result) {
+	if (data.apply !== true || result?.type !== "review-approved") return result;
+	const payload = {
+		op: "apply-review",
+		mode,
+		bundlePath: data.bundlePath || "memory/",
+		headCommit: data.headCommit || null,
+		memories,
+		decisions: result.decisions,
+	};
+	const out = await new Promise((resolve) => {
+		const child = execFile(
+			process.execPath,
+			[WRITE, ...(data.project ? [data.project] : [])],
+			{ encoding: "utf8" },
+			(err, stdout, stderr) => resolve({ err, stdout, stderr }),
+		);
+		child.stdin.end(JSON.stringify(payload));
+	});
+	let applied = null;
+	try {
+		applied = JSON.parse(out.stdout.trim().split("\n").pop());
+	} catch {}
+	return {
+		...result,
+		applied: applied || {
+			ok: false,
+			error: String(out.stderr || "writer produced no result").trim(),
+		},
+	};
+}
+
+serve({ step: mode, html, onSubmit });
