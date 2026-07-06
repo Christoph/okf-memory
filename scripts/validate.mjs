@@ -40,6 +40,14 @@ export function parseFrontmatter(text) {
 			obj[currentKey].push(parseScalar(list[1]));
 			continue;
 		}
+		// Continuation line of a block-list item mapping, e.g. iterator's
+		// `commits:` entries (`- sha: …` followed by indented `kind:`/`date:`).
+		// Fold it into the previous item so shared bundles stay valid.
+		const cont = line.match(/^\s+([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.*)$/);
+		if (cont && currentKey && Array.isArray(obj[currentKey]) && obj[currentKey].length) {
+			obj[currentKey][obj[currentKey].length - 1] += `, ${cont[1]}: ${cont[2]}`;
+			continue;
+		}
 		const kv = line.match(/^([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.*)$/);
 		if (!kv) throw new Error(`cannot parse frontmatter line: ${line}`);
 		currentKey = kv[1];

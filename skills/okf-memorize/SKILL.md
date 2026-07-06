@@ -21,7 +21,7 @@ Draft and review new okf-memory entries from commits since `last_memorized_commi
 2. Read `last_memorized_commit` from `memory/index.md` as `baseCommit`.
 3. Validate it with `git cat-file -e "$baseCommit^{commit}"`.
 4. If invalid, warn that history may have been rebased/force-pushed. Try `git merge-base HEAD "$baseCommit"`; if that fails or is not useful, offer a full-history review or abort.
-5. If `git log --oneline "$baseCommit..HEAD"` is empty, report `nothing to memorize` and stop.
+5. If `git log --oneline "$baseCommit..HEAD"` is empty, report `nothing to memorize` and stop. An empty or short range is expected in repos driven by iterator: `/iterator-implement` evaluates each accepted chunk wave and advances `last_memorized_commit` itself, so only commits made outside that flow accumulate here.
 
 ## Study changes
 
