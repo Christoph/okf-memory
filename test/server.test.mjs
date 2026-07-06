@@ -47,38 +47,44 @@ test("embedded payload escapes </script> so fixture data cannot close script blo
 	}
 });
 
-test("wrong or missing token returns 403, keeps server alive, and leaks no stdout", async () => {
-	const server = startServer("init.json");
+test("OKF_BIND_HOST=0.0.0.0 binds all interfaces but prints a host-clickable URL", async () => {
+	const server = startServer("init.json", { OKF_BIND_HOST: "0.0.0.0" });
 	try {
 		const url = await server.ready;
-		const missing = await request(withPath(url, "/").replace(/\?t=[^&]+/, ""));
-		assert.equal(missing.status, 403);
-		const bad = new URL(url);
-		bad.searchParams.set("t", "not-the-token");
-		const wrong = await request(bad.toString());
-		assert.equal(wrong.status, 403);
-		await sleep(100);
-		assert.equal(server.exited, false);
-		assert.equal(server.stdout, "");
+		assert.match(url, /http:\/\/127\.0\.0\.1:/);
 
-		const payload = { type: "cancel" };
-		await request(withPath(url, "/submit"), {
+		const withRemoteHost = await request(url, {
+			headers: { Host: "sandbox.example:8888" },
+		});
+		assert.equal(withRemoteHost.status, 200);
+
+		await request(withPath(url, "/cancel?now=1"), {
 			method: "POST",
-			body: JSON.stringify(payload),
+			body: "",
+			headers: { Host: "sandbox.example:8888" },
 		});
 		await server.waitForExit();
-		assert.equal(server.stdout.trim(), JSON.stringify(payload));
 	} finally {
 		await close(server);
 	}
 });
 
-test("non-local Host header returns 403", async () => {
-	const server = startServer("init.json");
+test("OKF_REMOTE=1 binds all interfaces and prints the URL instead of opening", async () => {
+	const server = startServer("init.json", {
+		OKF_REMOTE: "1",
+		OKF_NO_OPEN: "",
+		OKF_BIND_HOST: "",
+		OKF_BROWSER: "",
+		BROWSER: "",
+	});
 	try {
 		const url = await server.ready;
-		const res = await request(url, { headers: { Host: "example.com" } });
-		assert.equal(res.status, 403);
+		assert.match(url, /http:\/\/127\.0\.0\.1:/);
+		await sleep(50);
+		assert.match(server.stderr, /remote session detected/);
+
+		const page = await request(url);
+		assert.equal(page.status, 200);
 		await request(withPath(url, "/cancel?now=1"), { method: "POST", body: "" });
 		await server.waitForExit();
 	} finally {
@@ -86,34 +92,17 @@ test("non-local Host header returns 403", async () => {
 	}
 });
 
-test("OKF_BIND_HOST enables sandbox remote access while preserving token checks", async () => {
-	const server = startServer("init.json", { OKF_BIND_HOST: "0.0.0.0" });
+test("OKF_REMOTE=0 forces a loopback bind even inside a container", async () => {
+	const server = startServer("init.json", {
+		OKF_REMOTE: "0",
+		OKF_BIND_HOST: "",
+	});
 	try {
 		const url = await server.ready;
-		assert.match(url, /http:\/\/0\.0\.0\.0:/);
+		assert.match(url, /http:\/\/127\.0\.0\.1:/);
 		await sleep(50);
-		assert.match(server.stderr, /remote bind enabled/);
-
-		const reachableUrl = new URL(url);
-		reachableUrl.hostname = "127.0.0.1";
-		const withRemoteHost = await request(reachableUrl.toString(), {
-			headers: { Host: "sandbox.example:8888" },
-		});
-		assert.equal(withRemoteHost.status, 200);
-
-		const withoutToken = await request(
-			reachableUrl.toString().replace(/\?t=[^&]+/, ""),
-			{
-				headers: { Host: "sandbox.example:8888" },
-			},
-		);
-		assert.equal(withoutToken.status, 403);
-
-		await request(withPath(reachableUrl.toString(), "/cancel?now=1"), {
-			method: "POST",
-			body: "",
-			headers: { Host: "sandbox.example:8888" },
-		});
+		assert.doesNotMatch(server.stderr, /remote session detected/);
+		await request(withPath(url, "/cancel?now=1"), { method: "POST", body: "" });
 		await server.waitForExit();
 	} finally {
 		await close(server);

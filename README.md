@@ -102,7 +102,7 @@ npm run preview:consolidate
 npm run preview:memorize
 ```
 
-The preview commands launch the shared review server with fixtures. Set `OKF_NO_OPEN=1` to suppress opening a browser. In sandbox/container images where the host cannot reach loopback inside the environment, set `OKF_BIND_HOST=0.0.0.0` to bind the local UI server on all interfaces; keep the token URL private. `npm run validate` checks the fixture bundle in this repo.
+The preview commands launch the shared review server with fixtures. Remote sessions (SSH, Docker/Podman containers) are detected automatically: the server binds `0.0.0.0` so a forwarded/published port reaches it from the host, skips launching a browser, and prints a `http://127.0.0.1:<port>/` URL to open on the host. Overrides: `OKF_REMOTE=1|0` forces remote/local mode, `OKF_BIND_HOST` pins the bind address, `OKF_PORT` pins the port (default 8888, walks up if busy), `OKF_NO_OPEN=1` suppresses opening a browser, and `OKF_BROWSER`/`BROWSER` set a custom opener (`none` disables). `npm run validate` checks the fixture bundle in this repo.
 
 Validate a target repo bundle:
 
