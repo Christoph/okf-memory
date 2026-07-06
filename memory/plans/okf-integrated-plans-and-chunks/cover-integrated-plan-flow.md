@@ -2,7 +2,8 @@
 type: Work Chunk
 title: Cover integrated plan flow
 description: Add tests and fixtures proving integrated plans and chunks are discovered, rendered, validated, and non-destructive.
-status: pending
+status: done
+done: 2026-07-06
 size: medium
 lines_estimate: 180
 plan: plans/okf-integrated-plans-and-chunks
@@ -15,7 +16,7 @@ files:
   - test/validate.test.mjs
   - test/fixtures/dashboard.json
   - scripts/validate.mjs
-timestamp: 2026-07-06T13:24:59Z
+timestamp: 2026-07-06T14:17:06Z
 tags:
   - tests
   - okf

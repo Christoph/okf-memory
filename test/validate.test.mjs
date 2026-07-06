@@ -38,6 +38,20 @@ test("validator passes a conforming OKF memory bundle", () => {
 	assert.deepEqual(validateBundle(bundle), { ok: true, errors: [] });
 });
 
+test("validator accepts integrated plan and chunk concepts", () => {
+	const bundle = makeBundle({
+		"index.md":
+			'---\nokf_version: "0.1"\nlast_memorized_commit: abc123\n---\n# Memory\n\n* [Plans](/plans/) - Work plans.\n',
+		"plans/index.md": "# Plans\n",
+		"plans/dashboard-ui.md":
+			"---\ntype: Plan\ntitle: Dashboard UI\ndescription: Add a browser memory plane.\nstatus: approved\n---\n# Goal\n",
+		"plans/dashboard-ui/index.md": "# Dashboard UI\n",
+		"plans/dashboard-ui/render-dashboard.md":
+			"---\ntype: Work Chunk\ntitle: Render dashboard\ndescription: Render the dashboard.\nstatus: pending\nplan: plans/dashboard-ui\ndepends_on:\n  - plans/dashboard-ui/design-schema\nfiles:\n  - skills/okf/server.mjs\n---\n# Implementation notes\n",
+	});
+	assert.deepEqual(validateBundle(bundle), { ok: true, errors: [] });
+});
+
 test("validator fails missing frontmatter on root index", () => {
 	const bundle = makeBundle({
 		"index.md": "# Memory\n",

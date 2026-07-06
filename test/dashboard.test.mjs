@@ -39,3 +39,24 @@ test("dashboard renders memory state, plans, chunks, and action callbacks", asyn
 		await server.stop();
 	}
 });
+
+test("dashboard emits create-plan action without a target", async () => {
+	const server = startServer("dashboard.json", {}, dashboardServerPath);
+	try {
+		const url = await server.ready;
+		const payload = {
+			type: "dashboard-action",
+			action: "create-plan",
+			prompt: "",
+		};
+		const res = await request(withPath(url, "/submit"), {
+			method: "POST",
+			body: JSON.stringify(payload),
+		});
+		assert.equal(res.status, 200);
+		await server.waitForExit();
+		assert.equal(server.stdout.trim(), JSON.stringify(payload));
+	} finally {
+		await server.stop();
+	}
+});

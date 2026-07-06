@@ -2,6 +2,7 @@
 
 ## 2026-07-06
 
+* **Implementation**: Committed chunk(cover-integrated-plan-flow) on branch iterator/preserve-root-memory-index.
 * **Implementation**: Committed chunk(write-okf-chunk-concepts) on branch iterator/preserve-root-memory-index.
 * **Implementation**: Committed chunk(write-okf-plan-concepts) on branch iterator/preserve-root-memory-index.
 * **Implementation**: Committed chunk(preserve-root-memory-index) on branch iterator/preserve-root-memory-index.

@@ -79,6 +79,7 @@ test("gather builds the dashboard payload from bundle + git state", () => {
 		assert.equal(p.bundlePath, "memory/");
 		assert.equal(p.memory.initialized, true);
 		assert.equal(p.memory.okfVersion, "0.1");
+		assert.equal(p.memory.lastMemorizedCommit, "abc123");
 		// error-handling.md (patterns) + plan + chunk = 3 concepts
 		assert.equal(p.memory.conceptCount, 3);
 		// every concept's files anchor points at untracked paths in this repo
