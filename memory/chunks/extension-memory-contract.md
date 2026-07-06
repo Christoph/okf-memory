@@ -7,9 +7,13 @@ size: medium
 lines_estimate: 110
 depends_on: []
 files: ["skills/okf-init/SKILL.md", "README.md", "docs/OKF_SPEC.md", "test/validate.test.mjs"]
-timestamp: "2026-07-06T14:39:42.967Z"
+timestamp: "2026-07-06T14:40:00.330Z"
 tags: []
 done: 2026-07-06
+commits:
+  - sha: 7bfc791b2f33c3661ce1e69e02198bd156af1f2d
+    kind: implement
+    date: 2026-07-06
 ---
 
 # Implementation notes

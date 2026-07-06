@@ -9,7 +9,10 @@
  *
  * Collects: memory bundle state (okf_version, last_memorized_commit, concept
  * count, stale file anchors, unmemorized commit count), the five knowledge
- * areas with per-area counts, and OKF plan/chunk concepts under memory/plans/.
+ * areas with per-area counts, and OKF plan/chunk concepts. Chunk documents under
+ * memory/chunks/ are identified by their slug (filename without .md) so draft
+ * chunks are visible before implementation; legacy memory/plans/ chunks remain
+ * supported for compatibility.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -82,6 +85,16 @@ function mdFilesUnder(dir) {
 	return out;
 }
 
+function listValue(value) {
+	if (typeof value === "string") return [value];
+	return Array.isArray(value) ? value : [];
+}
+
+function chunkIdentity(rel) {
+	if (!rel.startsWith("chunks/")) return rel;
+	return rel.slice("chunks/".length);
+}
+
 export function gather(startDir) {
 	const cwd = startDir || process.cwd();
 	const root = git(["rev-parse", "--show-toplevel"], cwd) || cwd;
@@ -133,14 +146,11 @@ export function gather(startDir) {
 
 	const plans = [];
 	const chunks = [];
-	const plansRoot = join(mem, "plans");
-	for (const p of mdFilesUnder(plansRoot)) {
+	for (const p of conceptFiles) {
 		const { fm, body } = frontmatter(readFileSync(p, "utf8"));
 		const type = String(fm.type || "").toLowerCase();
 		const rel = relative(mem, p).replace(/\.md$/, "").split("\\").join("/");
 		if (type === "plan") {
-			let files = fm.files ?? [];
-			if (typeof files === "string") files = [files];
 			plans.push({
 				id: rel,
 				title: fm.title || rel,
@@ -148,25 +158,25 @@ export function gather(startDir) {
 				status: fm.status || "",
 				branch: fm.branch || "",
 				created: fm.created || "",
-				files: Array.isArray(files) ? files : [],
+				files: listValue(fm.files),
 				chunks: [],
 			});
 		} else if (type === "work chunk" || type === "chunk") {
-			let depends = fm.depends_on ?? [];
-			let files = fm.files ?? [];
-			if (typeof depends === "string") depends = [depends];
-			if (typeof files === "string") files = [files];
+			const id = chunkIdentity(rel);
+			const planId = fm.plan || (rel.startsWith("chunks/") ? "" : rel.split("/").slice(0, -1).join("/"));
 			chunks.push({
-				id: rel,
-				planId: fm.plan || rel.split("/").slice(0, -1).join("/"),
-				title: fm.title || rel,
+				id,
+				slug: id.split("/").pop(),
+				path: `${rel}.md`,
+				planId,
+				title: fm.title || id,
 				description: fm.description || "",
 				status: fm.status || "",
 				size: fm.size || "",
 				linesEstimate: fm.lines_estimate || "",
 				testsStatus: fm.tests_status || "",
-				dependsOn: Array.isArray(depends) ? depends : [],
-				files: Array.isArray(files) ? files : [],
+				dependsOn: listValue(fm.depends_on),
+				files: listValue(fm.files),
 				body,
 			});
 		}

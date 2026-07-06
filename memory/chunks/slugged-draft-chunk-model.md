@@ -2,13 +2,14 @@
 type: Chunk
 title: Slugged draft chunk model
 description: Persist planned chunks as draft OKF files early and make slug/file identity the canonical identifier used by gather/server/UI payloads.
-status: pending
+status: done
 size: medium
 lines_estimate: 140
 depends_on: []
 files: ["skills/okf/gather.mjs", "test/gather.test.mjs", "README.md"]
-timestamp: "2026-07-06T14:36:18.550Z"
+timestamp: "2026-07-06T14:46:04.989Z"
 tags: []
+done: 2026-07-06
 ---
 
 # Implementation notes
