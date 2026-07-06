@@ -13,7 +13,7 @@ The bundle follows `docs/OKF_SPEC.md` progressive disclosure: start at `memory/i
 - `/okf-consolidate` — review/update/merge/delete existing memories and flag stale file references.
 - `/okf-memorize` — draft memories from commits since `last_memorized_commit`, flag conflicts, then advance the pointer on approval.
 
-Plans and implementation chunks are represented as normal OKF markdown concepts under `memory/plans/`; each chunk is its own `.md` file with frontmatter such as `type: Work Chunk`, `status: pending`, `depends_on: [...]`, and `files: [...]` so the dashboard remains human-readable and diffable.
+Plans and implementation chunks are represented as normal OKF markdown concepts under `memory/plans/`; each chunk is its own `.md` file with frontmatter such as `type: Work Chunk`, `status: pending`, `depends_on: [...]`, and `files: [...]` so the dashboard remains human-readable and diffable. Adding plans to an existing OKF bundle is non-destructive: keep root `memory/index.md` frontmatter such as `okf_version` and `last_memorized_commit`, preserve existing area links and unknown keys, and add the `/plans/` link only when it is missing.
 
 ## Install: Claude Code
 

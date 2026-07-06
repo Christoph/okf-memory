@@ -28,7 +28,7 @@ Read exactly one JSON line from the server's stdout and react to it (see below).
 
 ## Plan and chunk file format
 
-Plans and chunks are normal OKF concepts so they stay clear and human-readable. `gather.mjs` reads them; you write them when handling `create-plan` / `create-chunk` actions.
+Plans and chunks are normal OKF concepts so they stay clear and human-readable. `gather.mjs` reads them; you write them when handling `create-plan` / `create-chunk` actions. Treat an existing `memory/index.md` as state to extend, not a generated file to replace: preserve its frontmatter (`okf_version`, `last_memorized_commit`, and unknown keys) and all existing area links.
 
 Recommended structure:
 
@@ -94,9 +94,9 @@ For `cancel` / `timeout`, write nothing and explicitly report that the dashboard
 
 When creating or updating plan/chunk concepts:
 
-1. Preserve OKF frontmatter and human-readable markdown bodies.
+1. Preserve OKF frontmatter, unknown metadata keys, and human-readable markdown bodies.
 2. Keep each chunk in a separate `.md` file.
 3. Regenerate `memory/plans/index.md` and the affected plan directory `index.md`.
-4. Regenerate root `memory/index.md` links if a new `plans/` area is introduced.
+4. Merge the `Plans` area link into root `memory/index.md` only if it is missing; never overwrite existing root frontmatter, `last_memorized_commit`, or memory area links.
 5. Append a newest-first `memory/log.md` entry with a bold lead such as `**Plan**`, `**Chunk**`, or `**Update**`.
 6. Run the validator when available.

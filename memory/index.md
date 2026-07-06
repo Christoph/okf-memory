@@ -14,6 +14,7 @@ This OKF bundle captures agent-relevant knowledge for the okf-memory repository.
 * [Patterns & Conventions](/patterns/) - How code and workflows are written in this repo.
 * [Pitfalls](/pitfalls/) - Known bugs, portability hazards, and sharp edges.
 * [Setup](/setup/) - Commands, install flows, and development loop.
+* [Plans](/plans/) - Approved work plans and implementation chunks tracked as OKF concepts.
 
 # Workflow
 
