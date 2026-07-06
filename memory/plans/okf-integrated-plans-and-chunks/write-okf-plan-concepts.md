@@ -2,7 +2,8 @@
 type: Work Chunk
 title: Write OKF plan concepts
 description: Write approved plans as type Plan OKF concept files under memory/plans with regenerated plan indexes.
-status: pending
+status: done
+done: 2026-07-06
 size: medium
 lines_estimate: 140
 plan: plans/okf-integrated-plans-and-chunks
@@ -12,7 +13,7 @@ files:
   - skills/okf/SKILL.md
   - skills/okf/gather.mjs
   - memory/log.md
-timestamp: 2026-07-06T13:24:59Z
+timestamp: 2026-07-06T13:59:32Z
 tags:
   - planning
   - okf

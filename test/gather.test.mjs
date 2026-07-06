@@ -37,6 +37,10 @@ type: Plan
 title: Dashboard UI
 description: Add a browser memory plane.
 status: in-progress
+branch: feature/dashboard
+created: 2026-07-06
+files:
+  - skills/okf/server.mjs
 ---
 
 body
@@ -80,6 +84,9 @@ test("gather builds the dashboard payload from bundle + git state", () => {
 
 		assert.equal(p.plans.length, 1);
 		assert.equal(p.plans[0].id, "plans/dashboard-ui");
+		assert.equal(p.plans[0].branch, "feature/dashboard");
+		assert.equal(p.plans[0].created, "2026-07-06");
+		assert.deepEqual(p.plans[0].files, ["skills/okf/server.mjs"]);
 		assert.deepEqual(p.plans[0].chunks, [
 			"plans/dashboard-ui/render-dashboard",
 		]);

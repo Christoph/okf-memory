@@ -73,7 +73,7 @@ export function frontmatter(text) {
 function mdFilesUnder(dir) {
 	const out = [];
 	if (!existsSync(dir)) return out;
-	for (const name of readdirSync(dir)) {
+	for (const name of readdirSync(dir).sort()) {
 		const p = join(dir, name);
 		if (statSync(p).isDirectory()) out.push(...mdFilesUnder(p));
 		else if (name.endsWith(".md") && name !== "index.md" && name !== "log.md")
@@ -139,11 +139,16 @@ export function gather(startDir) {
 		const type = String(fm.type || "").toLowerCase();
 		const rel = relative(mem, p).replace(/\.md$/, "").split("\\").join("/");
 		if (type === "plan") {
+			let files = fm.files ?? [];
+			if (typeof files === "string") files = [files];
 			plans.push({
 				id: rel,
 				title: fm.title || rel,
 				description: fm.description || "",
 				status: fm.status || "",
+				branch: fm.branch || "",
+				created: fm.created || "",
+				files: Array.isArray(files) ? files : [],
 				chunks: [],
 			});
 		} else if (type === "work chunk" || type === "chunk") {

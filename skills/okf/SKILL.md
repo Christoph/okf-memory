@@ -79,8 +79,8 @@ The server returns `{ "type": "dashboard-action", "action": "...", "target": "..
 - `init`: run the `/okf-init` workflow.
 - `consolidate`: run the `/okf-consolidate` workflow.
 - `memorize`: run the `/okf-memorize` workflow.
-- `create-plan`: draft new OKF plan and chunk files, then review the proposed files with the user before writing.
-- `create-chunk`: add a separate `Work Chunk` OKF concept under the target plan, then review before writing.
+- `create-plan`: draft a new OKF plan, review the exact proposed markdown with the user, then on approval write `memory/plans/<plan-slug>.md`, `memory/plans/<plan-slug>/index.md`, regenerate `memory/plans/index.md`, merge the `/plans/` root link if needed, and append `memory/log.md`.
+- `create-chunk`: add a separate `Work Chunk` OKF concept under the target plan, then review the exact proposed markdown before writing.
 - `implement`: read the selected chunk file and its dependencies, implement it, run relevant tests, then update the chunk `status` only after success.
 - `test`: read the selected chunk file, run relevant tests, report results, and update `status: tested` only when tests pass.
 - `mark-done`: verify the selected chunk's requested tests have passed or ask the user for confirmation, then update `status: done`.
@@ -93,6 +93,8 @@ For `cancel` / `timeout`, write nothing and explicitly report that the dashboard
 ## Writing plan/chunk files
 
 When creating or updating plan/chunk concepts:
+
+For `create-plan`, write the approved plan as `memory/plans/<plan-slug>.md` with `type: Plan`, `status`, `branch`, `created`, `timestamp`, and any relevant `files:` anchors. Also create `memory/plans/<plan-slug>/index.md` for that plan's chunks and update `memory/plans/index.md` with the plan title and one-line description.
 
 1. Preserve OKF frontmatter, unknown metadata keys, and human-readable markdown bodies.
 2. Keep each chunk in a separate `.md` file.

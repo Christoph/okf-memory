@@ -2,6 +2,7 @@
 
 ## 2026-07-06
 
+* **Implementation**: Committed chunk(write-okf-plan-concepts) on branch iterator/preserve-root-memory-index.
 * **Implementation**: Committed chunk(preserve-root-memory-index) on branch iterator/preserve-root-memory-index.
 * **Chunk**: Created 4 chunks for the OKF-integrated plans and chunks plan.
 * **Plan**: Approved OKF-integrated plans and chunks plan under `memory/plans/okf-integrated-plans-and-chunks.md`.
